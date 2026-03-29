@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.geometry.Pos?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<StackPane xmlns:fx="http://javafx.com/fxml" fx:controller="com.example.appdesktop.LoginController"
+           style="-fx-background-color: linear-gradient(to bottom right, #fffbeb, #fff7ed, #fef3c7);">
+    <children>
+        <VBox alignment="CENTER" maxWidth="560" spacing="20" StackPane.alignment="CENTER">
+            <padding>
+                <Insets top="24" right="24" bottom="24" left="24"/>
+            </padding>
+
+            <VBox alignment="CENTER" spacing="8">
+                <HBox alignment="CENTER" minHeight="64" minWidth="64" prefHeight="64" prefWidth="64"
+                      style="-fx-background-color: linear-gradient(to bottom right, #f59e0b, #ea580c); -fx-background-radius: 18;">
+                    <children>
+                        <Label style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: white;" text="TL"/>
+                    </children>
+                </HBox>
+                <Label style="-fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="Taca Lab"/>
+                <Label style="-fx-font-size: 14px; -fx-text-fill: #4b5563;" text="Sistema de Gestao de Ceramica Artesanal"/>
+            </VBox>
+
+            <TabPane prefHeight="390" tabClosingPolicy="UNAVAILABLE" style="-fx-background-color: transparent;">
+                <tabs>
+                    <Tab text="Cliente">
+                        <content>
+                            <VBox spacing="16" style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20;">
+                                <children>
+                                    <Label style="-fx-font-size: 20px; -fx-font-weight: bold;" text="Portal do Cliente"/>
+                                    <Label style="-fx-text-fill: #4b5563;" text="Aceda a sua area para gerir encomendas e projetos."/>
+
+                                    <VBox spacing="6">
+                                        <children>
+                                            <Label text="Email"/>
+                                            <TextField fx:id="clientEmailField" promptText="seu@email.com"/>
+                                        </children>
+                                    </VBox>
+
+                                    <VBox spacing="6">
+                                        <children>
+                                            <Label text="Password"/>
+                                            <PasswordField fx:id="clientPasswordField" promptText="********"/>
+                                        </children>
+                                    </VBox>
+
+                                    <Button mnemonicParsing="false" onAction="#onClientLogin"
+                                            style="-fx-background-color: #d97706; -fx-text-fill: white; -fx-font-weight: bold;"
+                                            text="Entrar como Cliente"/>
+
+                                    <Label style="-fx-text-fill: #4b5563;" text="Ainda nao tem conta? Registar"/>
+                                </children>
+                            </VBox>
+                        </content>
+                    </Tab>
+
+                    <Tab text="Administrador">
+                        <content>
+                            <VBox spacing="16" style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20;">
+                                <children>
+                                    <Label style="-fx-font-size: 20px; -fx-font-weight: bold;" text="Painel Administrativo"/>
+                                    <Label style="-fx-text-fill: #4b5563;" text="Acesso exclusivo para gestao do sistema."/>
+
+                                    <VBox spacing="6">
+                                        <children>
+                                            <Label text="Email"/>
+                                            <TextField fx:id="adminEmailField" promptText="admin@tacalab.com"/>
+                                        </children>
+                                    </VBox>
+
+                                    <VBox spacing="6">
+                                        <children>
+                                            <Label text="Password"/>
+                                            <PasswordField fx:id="adminPasswordField" promptText="********"/>
+                                        </children>
+                                    </VBox>
+
+                                    <Button mnemonicParsing="false" onAction="#onAdminLogin"
+                                            style="-fx-background-color: #d97706; -fx-text-fill: white; -fx-font-weight: bold;"
+                                            text="Entrar como Administrador"/>
+                                    <Region prefHeight="8"/>
+                                </children>
+                            </VBox>
+                        </content>
+                    </Tab>
+                </tabs>
+            </TabPane>
+
+            <Label style="-fx-font-size: 12px; -fx-text-fill: #4b5563;" text="(c) 2026 Taca Lab - Ceramica Artesanal"/>
+        </VBox>
+    </children>
+</StackPane>

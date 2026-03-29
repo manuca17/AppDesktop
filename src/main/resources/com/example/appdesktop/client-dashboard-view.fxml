@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane fitToWidth="true" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.example.appdesktop.ClientDashboardController"
+            style="-fx-background: #fffaf0; -fx-background-color: #fffaf0;">
+    <content>
+        <VBox spacing="18" style="-fx-background-color: linear-gradient(to bottom right, #fffbeb, #fff7ed, #fef3c7);">
+            <padding>
+                <Insets top="24" right="24" bottom="24" left="24"/>
+            </padding>
+
+            <VBox spacing="4">
+                <Label fx:id="welcomeLabel" style="-fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="Bem-vinda, Maria!"/>
+                <Label style="-fx-text-fill: #4b5563;" text="Aqui esta o resumo da sua atividade"/>
+            </VBox>
+
+            <GridPane hgap="14" vgap="14">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="33.3"/>
+                    <ColumnConstraints percentWidth="33.3"/>
+                    <ColumnConstraints percentWidth="33.4"/>
+                </columnConstraints>
+
+                <VBox GridPane.columnIndex="0" spacing="8" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 16;">
+                    <HBox spacing="10">
+                        <Label style="-fx-font-weight: bold; -fx-text-fill: #4b5563;" text="Projetos Ativos"/>
+                    </HBox>
+                    <Label fx:id="projectsCountLabel" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="0"/>
+                    <Label style="-fx-font-size: 12px; -fx-text-fill: #6b7280;" text="em desenvolvimento"/>
+                </VBox>
+
+                <VBox GridPane.columnIndex="1" spacing="8" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 16;">
+                    <HBox spacing="10">
+                        <Label style="-fx-font-weight: bold; -fx-text-fill: #4b5563;" text="Encomendas"/>
+                    </HBox>
+                    <Label fx:id="ordersCountLabel" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="0"/>
+                    <Label style="-fx-font-size: 12px; -fx-text-fill: #6b7280;" text="total de encomendas"/>
+                </VBox>
+
+                <VBox GridPane.columnIndex="2" spacing="8" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 16;">
+                    <HBox spacing="10">
+                        <Label style="-fx-font-weight: bold; -fx-text-fill: #4b5563;" text="Investimento Total"/>
+                    </HBox>
+                    <Label fx:id="investmentLabel" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="EUR 0,00"/>
+                    <Label style="-fx-font-size: 12px; -fx-text-fill: #6b7280;" text="em projetos e encomendas"/>
+                </VBox>
+            </GridPane>
+
+            <VBox spacing="12" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 16;">
+                <HBox>
+                    <VBox spacing="2">
+                        <Label style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Projetos Personalizados"/>
+                        <Label style="-fx-text-fill: #4b5563;" text="Acompanhe o desenvolvimento dos seus projetos"/>
+                    </VBox>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button onAction="#onViewAllProjects" style="-fx-background-color: transparent; -fx-border-color: #d1d5db;" text="Ver Todos"/>
+                </HBox>
+                <VBox fx:id="projectsContainer" spacing="10"/>
+            </VBox>
+
+            <VBox spacing="12" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 16;">
+                <HBox>
+                    <VBox spacing="2">
+                        <Label style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Encomendas Recentes"/>
+                        <Label style="-fx-text-fill: #4b5563;" text="Ultimas compras do catalogo"/>
+                    </VBox>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button onAction="#onViewAllOrders" style="-fx-background-color: transparent; -fx-border-color: #d1d5db;" text="Ver Todas"/>
+                </HBox>
+                <VBox fx:id="ordersContainer" spacing="10"/>
+            </VBox>
+
+            <GridPane hgap="14">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="50"/>
+                    <ColumnConstraints percentWidth="50"/>
+                </columnConstraints>
+
+                <VBox GridPane.columnIndex="0" spacing="10"
+                      style="-fx-background-color: linear-gradient(to bottom right, #fef3c7, #ffedd5); -fx-border-color: #fcd34d; -fx-background-radius: 10; -fx-border-radius: 10; -fx-padding: 16;">
+                    <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Iniciar Projeto Personalizado"/>
+                    <Label style="-fx-text-fill: #4b5563;" text="Submeta um briefing para desenvolvermos pecas exclusivas"/>
+                    <Button onAction="#onNewBriefing" style="-fx-background-color: #d97706; -fx-text-fill: white; -fx-font-weight: bold;" text="Novo Briefing"/>
+                </VBox>
+
+                <VBox GridPane.columnIndex="1" spacing="10"
+                      style="-fx-background-color: linear-gradient(to bottom right, #dbeafe, #e0e7ff); -fx-border-color: #93c5fd; -fx-background-radius: 10; -fx-border-radius: 10; -fx-padding: 16;">
+                    <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Explorar Catalogo"/>
+                    <Label style="-fx-text-fill: #4b5563;" text="Descubra as nossas pecas artesanais disponiveis"/>
+                    <Button onAction="#onOpenCatalog" style="-fx-background-color: #2563eb; -fx-text-fill: white; -fx-font-weight: bold;" text="Ver Catalogo"/>
+                </VBox>
+            </GridPane>
+        </VBox>
+    </content>
+</ScrollPane>
