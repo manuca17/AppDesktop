@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.TilePane?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane fitToWidth="true" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.example.appdesktop.AdminCatalogController"
+            style="-fx-background: transparent; -fx-background-color: transparent;">
+    <content>
+        <VBox spacing="16" style="-fx-padding: 4;">
+            <HBox alignment="CENTER_LEFT" spacing="12">
+                <VBox spacing="4">
+                    <Label style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="Gestao de Produtos"/>
+                    <Label style="-fx-text-fill: #4b5563;" text="Adicione, edite ou remova produtos do catalogo"/>
+                </VBox>
+                <HBox HBox.hgrow="ALWAYS"/>
+                <Button mnemonicParsing="false" onAction="#onAddProduct"
+                        style="-fx-background-color: #7c3aed; -fx-text-fill: white; -fx-font-weight: bold;" text="+ Novo Produto"/>
+            </HBox>
+
+            <HBox spacing="10">
+                <TextField fx:id="searchField" onKeyReleased="#onSearchChanged" promptText="Procurar produtos..." HBox.hgrow="ALWAYS"/>
+                <ComboBox fx:id="categoryCombo" onAction="#onCategoryChanged" prefWidth="180"/>
+            </HBox>
+
+            <TilePane fx:id="productsPane" hgap="12" prefColumns="3" tileAlignment="TOP_LEFT" vgap="12">
+                <padding>
+                    <Insets top="4" right="0" bottom="4" left="0"/>
+                </padding>
+            </TilePane>
+
+            <Label fx:id="emptyLabel" managed="false" style="-fx-text-fill: #6b7280;" text="Nenhum produto encontrado" visible="false"/>
+        </VBox>
+    </content>
+</ScrollPane>
