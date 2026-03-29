@@ -47,24 +47,22 @@
                                             <ColumnConstraints percentWidth="33.4"/>
                                         </columnConstraints>
                                         <VBox GridPane.columnIndex="0" spacing="4" style="-fx-background-color: white; -fx-background-radius: 8; -fx-padding: 10;">
-                                            <Label text="Data de Criacao"/>
-                                            <Label fx:id="createdAtLabel" style="-fx-font-weight: bold;" text="--/--/----"/>
+                                            <Label style="-fx-text-fill: #6b7280;" text="Data de Criacao"/>
+                                            <Label fx:id="createdAtLabel" style="-fx-font-weight: bold; -fx-text-fill: #111827;" text="--/--/----"/>
                                         </VBox>
                                         <VBox GridPane.columnIndex="1" spacing="4" style="-fx-background-color: white; -fx-background-radius: 8; -fx-padding: 10;">
-                                            <Label text="Quantidade"/>
-                                            <Label fx:id="quantityLabel" style="-fx-font-weight: bold;" text="0 pecas"/>
+                                            <Label style="-fx-text-fill: #6b7280;" text="Quantidade"/>
+                                            <Label fx:id="quantityLabel" style="-fx-font-weight: bold; -fx-text-fill: #111827;" text="0 pecas"/>
                                         </VBox>
                                         <VBox GridPane.columnIndex="2" spacing="4" style="-fx-background-color: white; -fx-background-radius: 8; -fx-padding: 10;">
-                                            <Label text="Prazo"/>
-                                            <Label fx:id="deadlineLabel" style="-fx-font-weight: bold;" text="A definir"/>
+                                            <Label style="-fx-text-fill: #6b7280;" text="Prazo"/>
+                                            <Label fx:id="deadlineLabel" style="-fx-font-weight: bold; -fx-text-fill: #111827;" text="A definir"/>
                                         </VBox>
                                     </GridPane>
 
                                     <VBox spacing="8" style="-fx-background-color: white; -fx-background-radius: 8; -fx-padding: 12;">
                                         <HBox>
-                                            <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Orcamento"/>
-                                            <Region HBox.hgrow="ALWAYS"/>
-                                            <Button mnemonicParsing="false" onAction="#onApproveQuote" style="-fx-background-color: #16a34a; -fx-text-fill: white;" text="Aprovar Orcamento"/>
+                                            <Label style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="Orcamento"/>
                                         </HBox>
                                         <GridPane hgap="8" vgap="8">
                                             <columnConstraints>
@@ -73,25 +71,25 @@
                                                 <ColumnConstraints percentWidth="33.4"/>
                                             </columnConstraints>
                                             <VBox GridPane.columnIndex="0" spacing="2" style="-fx-background-color: #fffbeb; -fx-background-radius: 8; -fx-padding: 8;">
-                                                <Label text="Fase 1: Design"/>
-                                                <Label fx:id="quoteDesignLabel" style="-fx-font-weight: bold;" text="EUR 0,00"/>
+                                                <Label style="-fx-text-fill: #6b7280;" text="Fase 1: Design"/>
+                                                <Label fx:id="quoteDesignLabel" style="-fx-font-weight: bold; -fx-text-fill: #111827;" text="EUR 0,00"/>
                                             </VBox>
                                             <VBox GridPane.columnIndex="1" spacing="2" style="-fx-background-color: #fffbeb; -fx-background-radius: 8; -fx-padding: 8;">
-                                                <Label text="Fase 2: Molde"/>
-                                                <Label fx:id="quoteMoldLabel" style="-fx-font-weight: bold;" text="EUR 0,00"/>
+                                                <Label style="-fx-text-fill: #6b7280;" text="Fase 2: Molde"/>
+                                                <Label fx:id="quoteMoldLabel" style="-fx-font-weight: bold; -fx-text-fill: #111827;" text="EUR 0,00"/>
                                             </VBox>
                                             <VBox GridPane.columnIndex="2" spacing="2" style="-fx-background-color: #fffbeb; -fx-background-radius: 8; -fx-padding: 8;">
-                                                <Label text="Fase 3: Producao"/>
-                                                <Label fx:id="quoteProductionLabel" style="-fx-font-weight: bold;" text="EUR 0,00"/>
+                                                <Label style="-fx-text-fill: #6b7280;" text="Fase 3: Producao"/>
+                                                <Label fx:id="quoteProductionLabel" style="-fx-font-weight: bold; -fx-text-fill: #111827;" text="EUR 0,00"/>
                                             </VBox>
                                         </GridPane>
                                         <HBox>
                                             <VBox spacing="2">
-                                                <Label text="Total do Projeto"/>
+                                                <Label style="-fx-text-fill: #6b7280;" text="Total do Projeto"/>
                                                 <Label fx:id="quoteDetailsLabel" style="-fx-font-size: 12px; -fx-text-fill: #6b7280;" text="Detalhes"/>
                                             </VBox>
                                             <Region HBox.hgrow="ALWAYS"/>
-                                            <Label fx:id="quoteTotalLabel" style="-fx-font-size: 24px; -fx-font-weight: bold;" text="EUR 0,00"/>
+                                            <Label fx:id="quoteTotalLabel" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="EUR 0,00"/>
                                         </HBox>
                                     </VBox>
                                 </VBox>
@@ -101,12 +99,12 @@
                         <Tab text="Briefing">
                             <content>
                                 <VBox spacing="10" style="-fx-padding: 12; -fx-background-color: white;">
-                                    <Label text="Tipo de Projeto"/>
-                                    <Label fx:id="briefingTypeLabel" style="-fx-font-weight: bold;" text="--"/>
-                                    <Label text="Orcamento"/>
-                                    <Label fx:id="briefingBudgetLabel" style="-fx-font-weight: bold;" text="EUR 0,00"/>
-                                    <Label text="Descricao"/>
-                                    <Label fx:id="briefingDescriptionLabel" wrapText="true" text="--"/>
+                                    <Label style="-fx-text-fill: #6b7280;" text="Tipo de Projeto"/>
+                                    <Label fx:id="briefingTypeLabel" style="-fx-font-weight: bold; -fx-text-fill: #111827;" text="--"/>
+                                    <Label style="-fx-text-fill: #6b7280;" text="Orcamento"/>
+                                    <Label fx:id="briefingBudgetLabel" style="-fx-font-weight: bold; -fx-text-fill: #111827;" text="EUR 0,00"/>
+                                    <Label style="-fx-text-fill: #6b7280;" text="Descricao"/>
+                                    <Label fx:id="briefingDescriptionLabel" style="-fx-text-fill: #111827;" wrapText="true" text="--"/>
                                 </VBox>
                             </content>
                         </Tab>
@@ -142,6 +140,14 @@
                                         <TextField fx:id="newMessageField" promptText="Escreva a sua mensagem..." HBox.hgrow="ALWAYS"/>
                                         <Button mnemonicParsing="false" onAction="#onSendMessage" style="-fx-background-color: #d97706; -fx-text-fill: white;" text="Enviar"/>
                                     </HBox>
+                                </VBox>
+                            </content>
+                        </Tab>
+
+                        <Tab text="Pagamentos">
+                            <content>
+                                <VBox spacing="10" style="-fx-padding: 12; -fx-background-color: white;">
+                                    <VBox fx:id="paymentsContainer" spacing="8"/>
                                 </VBox>
                             </content>
                         </Tab>

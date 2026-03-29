@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane fitToWidth="true" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.example.appdesktop.ProjectPaymentController"
+            style="-fx-background: transparent; -fx-background-color: transparent;">
+    <content>
+        <VBox spacing="16" style="-fx-padding: 4;">
+            <HBox>
+                <Button mnemonicParsing="false" onAction="#onBack" style="-fx-background-color: transparent; -fx-border-color: #d1d5db;" text="Voltar ao Projeto"/>
+            </HBox>
+
+            <VBox spacing="4">
+                <Label style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="Pagamento do Projeto"/>
+                <Label style="-fx-text-fill: #4b5563;" text="Complete o pagamento para avancar com a producao"/>
+            </VBox>
+
+            <GridPane hgap="14" vgap="14">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="66.66"/>
+                    <ColumnConstraints percentWidth="33.34"/>
+                </columnConstraints>
+
+                <VBox GridPane.columnIndex="0" spacing="12">
+                    <VBox spacing="10" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 16; -fx-border-color: #d1d5db;">
+                        <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Informacoes do Projeto"/>
+                        <HBox spacing="12">
+                            <VBox spacing="2" HBox.hgrow="ALWAYS">
+                                <Label style="-fx-font-size: 11px; -fx-text-fill: #6b7280;" text="Projeto"/>
+                                <Label fx:id="projectNameLabel" style="-fx-font-weight: bold;" text="--"/>
+                            </VBox>
+                            <Label fx:id="projectIdLabel" style="-fx-background-color: #dbeafe; -fx-text-fill: #1e40af; -fx-padding: 4 8; -fx-background-radius: 999;" text="PRJ-000"/>
+                        </HBox>
+
+                        <VBox spacing="2" style="-fx-border-color: #e5e7eb; -fx-border-width: 1 0 0 0; -fx-padding: 8 0;">
+                            <Label style="-fx-font-size: 11px; -fx-text-fill: #6b7280;" text="Fase"/>
+                            <Label fx:id="phaseInfoLabel" style="-fx-font-weight: bold;" text="Fase 1: Design"/>
+                            <Label fx:id="phaseInfoDescriptionLabel" style="-fx-font-size: 12px; -fx-text-fill: #4b5563;" text="Desenvolvimento do conceito"/>
+                        </VBox>
+                    </VBox>
+
+                    <VBox spacing="10" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 16; -fx-border-color: #d1d5db;">
+                        <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Metodo de Pagamento"/>
+
+                        <RadioButton fx:id="mbwayRadio" style="-fx-text-fill: #111827;" text="MBWay"/>
+                        <RadioButton fx:id="cardRadio" style="-fx-text-fill: #111827;" text="Cartao de Credito/Debito"/>
+                        <RadioButton fx:id="multibancoRadio" style="-fx-text-fill: #111827;" text="Multibanco"/>
+                        <RadioButton fx:id="transferRadio" style="-fx-text-fill: #111827;" text="Transferencia Bancaria"/>
+
+                        <VBox fx:id="mbwayDetails" spacing="6" style="-fx-background-color: #f3f4f6; -fx-background-radius: 8; -fx-padding: 10;">
+                            <Label style="-fx-font-weight: bold;" text="Numero de Telemovel MBWay *"/>
+                            <TextField fx:id="mbwayPhoneField" promptText="912 345 678"/>
+                            <Label style="-fx-font-size: 11px; -fx-text-fill: #6b7280;" text="Sera enviada uma notificacao push para a app MBWay. Tem 5 minutos para aprovar."/>
+                        </VBox>
+
+                        <VBox fx:id="cardDetails" managed="false" spacing="6" style="-fx-background-color: #f3f4f6; -fx-background-radius: 8; -fx-padding: 10;" visible="false">
+                            <Label style="-fx-font-weight: bold;" text="Numero do Cartao *"/>
+                            <TextField fx:id="cardNumberField" promptText="1234 5678 9012 3456"/>
+                            <Label style="-fx-font-weight: bold;" text="Nome no Cartao *"/>
+                            <TextField fx:id="cardNameField" promptText="MARIA SILVA"/>
+                            <HBox spacing="8">
+                                <VBox spacing="4" HBox.hgrow="ALWAYS">
+                                    <Label text="Validade *"/>
+                                    <TextField fx:id="cardExpiryField" promptText="MM/AA"/>
+                                </VBox>
+                                <VBox spacing="4" HBox.hgrow="ALWAYS">
+                                    <Label text="CVV *"/>
+                                    <TextField fx:id="cardCvvField" promptText="123"/>
+                                </VBox>
+                            </HBox>
+                        </VBox>
+
+                        <VBox fx:id="multibancoDetails" managed="false" spacing="6" style="-fx-background-color: #f3f4f6; -fx-background-radius: 8; -fx-padding: 10;" visible="false">
+                            <Label style="-fx-font-weight: bold;" text="Referencia Multibanco"/>
+                            <Label style="-fx-font-size: 11px; -fx-text-fill: #6b7280;" text="Utilize esta referencia em qualquer ATM ou homebanking."/>
+                        </VBox>
+
+                        <VBox fx:id="transferDetails" managed="false" spacing="6" style="-fx-background-color: #f3f4f6; -fx-background-radius: 8; -fx-padding: 10;" visible="false">
+                            <Label style="-fx-font-weight: bold;" text="Dados da Transferencia"/>
+                            <Label style="-fx-font-size: 11px; -fx-text-fill: #6b7280;" text="IBAN: PT50 0000 0000 0000 0000 0000 0"/>
+                            <Label style="-fx-font-size: 11px; -fx-text-fill: #6b7280;" text="Banco: Caixa Geral de Depositos"/>
+                        </VBox>
+
+                        <VBox style="-fx-border-color: #e5e7eb; -fx-border-width: 1 0 0 0; -fx-padding: 8 0;">
+                            <Label style="-fx-font-weight: bold;" text="NIF (Opcional)"/>
+                            <TextField fx:id="nifField" promptText="123456789"/>
+                        </VBox>
+                    </VBox>
+                </VBox>
+
+                <VBox GridPane.columnIndex="1" spacing="10" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 16; -fx-border-color: #d1d5db;">
+                    <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Resumo do Pagamento"/>
+
+                    <VBox spacing="8" style="-fx-background-color: #fffbeb; -fx-background-radius: 8; -fx-padding: 12; -fx-border-color: #fcd34d; -fx-border-width: 1;">
+                        <Label fx:id="phaseSummaryLabel" style="-fx-font-weight: bold; -fx-text-fill: #111827;" text="Fase 1: Design"/>
+                        <Label fx:id="phaseSummaryDescriptionLabel" style="-fx-font-size: 12px; -fx-text-fill: #4b5563;" text="Desenvolvimento do conceito" wrapText="true"/>
+                    </VBox>
+
+                    <HBox style="-fx-border-color: #e5e7eb; -fx-border-width: 1 0 0 0; -fx-padding: 8 0;">
+                        <VBox spacing="4">
+                            <Label style="-fx-font-size: 11px; -fx-text-fill: #6b7280;" text="Valor a Pagar"/>
+                            <Label fx:id="amountLabel" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="EUR 0,00"/>
+                        </VBox>
+                    </HBox>
+
+                    <HBox style="-fx-border-color: #e5e7eb; -fx-border-width: 1 0 0 0; -fx-padding: 8 0;">
+                        <Label fx:id="dueDateLabel" style="-fx-font-size: 12px; -fx-text-fill: #ca8a04;" text="Vencimento: --"/>
+                    </HBox>
+
+                    <Button fx:id="submitButton" mnemonicParsing="false" onAction="#onConfirmPayment" style="-fx-background-color: #d97706; -fx-text-fill: white; -fx-font-weight: bold;" text="Processar Pagamento"/>
+                </VBox>
+            </GridPane>
+        </VBox>
+    </content>
+</ScrollPane>

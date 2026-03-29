@@ -345,6 +345,52 @@ public class ClientPortalDataService {
     ) {
     }
 
+    public record CartItem(
+            String productId,
+            String productName,
+            BigDecimal price,
+            int quantity,
+            String imageUrl
+    ) {
+        public BigDecimal lineTotal() {
+            return price.multiply(BigDecimal.valueOf(quantity));
+        }
+    }
+
+    public record Payment(
+            String id,
+            String projectId,
+            String phase,
+            BigDecimal amount,
+            String status,
+            LocalDate dueDate,
+            LocalDate paidDate,
+            String method
+    ) {
+    }
+
+    public List<Payment> projectPayments(String projectId) {
+        return switch (projectId) {
+            case "PRJ-001" -> List.of(
+                    new Payment("PAY-001", projectId, "design", new BigDecimal("180.00"), "paid",
+                            null, LocalDate.now().minusDays(15), "card"),
+                    new Payment("PAY-002", projectId, "mold", new BigDecimal("220.00"), "pending",
+                            LocalDate.now().plusDays(3), null, null),
+                    new Payment("PAY-003", projectId, "production", new BigDecimal("380.00"), "pending",
+                            LocalDate.now().plusDays(20), null, null)
+            );
+            case "PRJ-002" -> List.of(
+                    new Payment("PAY-004", projectId, "design", new BigDecimal("250.00"), "pending",
+                            LocalDate.now().plusDays(7), null, null),
+                    new Payment("PAY-005", projectId, "mold", new BigDecimal("300.00"), "pending",
+                            LocalDate.now().plusDays(14), null, null),
+                    new Payment("PAY-006", projectId, "production", new BigDecimal("700.00"), "pending",
+                            LocalDate.now().plusDays(28), null, null)
+            );
+            default -> List.of();
+        };
+    }
+
     private String normalizeId(String raw) {
         if (raw == null) {
             return "";

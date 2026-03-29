@@ -41,6 +41,7 @@ public class CatalogController implements ClientPage {
 
     private List<ClientPortalDataService.ProductItem> allProducts;
     private int cartCount;
+    private ClientPageNavigator navigator;
 
     @FXML
     private void initialize() {
@@ -69,7 +70,7 @@ public class CatalogController implements ClientPage {
 
     @Override
     public void setNavigator(ClientPageNavigator navigator) {
-        // This page does not require cross-page action buttons for now.
+        this.navigator = navigator;
     }
 
     private void refreshProducts() {
@@ -153,6 +154,11 @@ public class CatalogController implements ClientPage {
         cartCount += 1;
         updateCartButton();
 
+        if (navigator != null) {
+            navigator.navigateTo("cart");
+            return;
+        }
+
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Carrinho");
         alert.setHeaderText("Produto adicionado");
@@ -162,6 +168,11 @@ public class CatalogController implements ClientPage {
 
     private void updateCartButton() {
         cartButton.setText("Carrinho (" + cartCount + ")");
+        cartButton.setOnAction(event -> {
+            if (navigator != null) {
+                navigator.navigateTo("cart");
+            }
+        });
         boolean visible = cartCount > 0;
         cartButton.setVisible(visible);
         cartButton.setManaged(visible);

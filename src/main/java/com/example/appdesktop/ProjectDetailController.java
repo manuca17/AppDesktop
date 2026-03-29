@@ -4,11 +4,13 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.text.NumberFormat;
@@ -82,6 +84,9 @@ public class ProjectDetailController implements ClientPage {
 
     @FXML
     private VBox messagesContainer;
+
+    @FXML
+    private VBox paymentsContainer;
 
     @FXML
     private TextField newMessageField;
@@ -189,9 +194,9 @@ public class ProjectDetailController implements ClientPage {
             quoteTotalLabel.setText(currencyFormat.format(quote == null ? java.math.BigDecimal.ZERO : quote.total()));
             quoteDetailsLabel.setText(dataService.quoteDetails(project.id()));
 
-            briefingTypeLabel.setText(briefing.projectType());
-            briefingBudgetLabel.setText(currencyFormat.format(briefing.budget()));
-            briefingDescriptionLabel.setText(briefing.description());
+            briefingTypeLabel.setText(nonBlank(briefing.projectType(), "Nao definido"));
+            briefingBudgetLabel.setText(briefing.budget() == null ? "Nao definido" : currencyFormat.format(briefing.budget()));
+            briefingDescriptionLabel.setText(nonBlank(briefing.description(), "Sem descricao"));
 
             renderTracking(dataService.trackingStages(project.id()));
             renderMeetings(dataService.projectMeetings(project.id()));
@@ -199,6 +204,8 @@ public class ProjectDetailController implements ClientPage {
             dynamicMessages.clear();
             dynamicMessages.addAll(dataService.projectMessages(project.id()));
             renderMessages();
+
+            renderPayments(dataService.projectPayments(project.id()));
         }, this::showNotFound);
     }
 
@@ -302,6 +309,89 @@ public class ProjectDetailController implements ClientPage {
         }
     }
 
+    private void renderPayments(List<ClientPortalDataService.Payment> payments) {
+        if (paymentsContainer == null) {
+            return;
+        }
+
+        paymentsContainer.getChildren().clear();
+
+        if (payments.isEmpty()) {
+            Label empty = new Label("Nenhum pagamento registado");
+            empty.setStyle("-fx-text-fill: #6b7280;");
+            paymentsContainer.getChildren().add(empty);
+            return;
+        }
+
+        java.math.BigDecimal paidTotal = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal pendingTotal = java.math.BigDecimal.ZERO;
+
+        for (ClientPortalDataService.Payment payment : payments) {
+            VBox card = new VBox(10);
+            card.setPadding(new Insets(14));
+            card.setAlignment(javafx.geometry.Pos.TOP_LEFT);
+            card.setStyle("-fx-background-color: " + paymentBackground(payment.status())
+                    + "; -fx-border-color: " + paymentBorder(payment.status())
+                    + "; -fx-border-radius: 10; -fx-background-radius: 10; -fx-border-width: 1;");
+
+            HBox header = new HBox(10);
+            VBox left = new VBox(4);
+            Label phase = new Label(phaseLabel(payment.phase()));
+            phase.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #111827;");
+
+            Label amount = new Label(currencyFormat.format(payment.amount()));
+            amount.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #111827;");
+
+            left.getChildren().addAll(phase, amount);
+
+            Region spacer = new Region();
+            HBox.setHgrow(spacer, Priority.ALWAYS);
+
+            VBox right = new VBox(4);
+            right.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
+            Label status = new Label(payment.status().equals("paid") ? "Pago" : "Pendente");
+            status.setStyle(paymentStatusStyle(payment.status()));
+
+            if (payment.status().equals("paid") && payment.paidDate() != null) {
+                Label date = new Label("Pago em: " + dateFormatter.format(payment.paidDate()));
+                date.setStyle("-fx-font-size: 11px; -fx-text-fill: #6b7280;");
+                right.getChildren().add(date);
+            }
+            if (payment.status().equals("pending") && payment.dueDate() != null) {
+                Label dueDate = new Label("Venc.: " + dateFormatter.format(payment.dueDate()));
+                dueDate.setStyle("-fx-font-size: 11px; -fx-text-fill: #9ca3af;");
+                right.getChildren().add(dueDate);
+            }
+            right.getChildren().add(status);
+
+            header.getChildren().addAll(left, spacer, right);
+
+            if (payment.status().equals("paid")) {
+                paidTotal = paidTotal.add(payment.amount());
+                card.getChildren().add(header);
+            } else {
+                pendingTotal = pendingTotal.add(payment.amount());
+                VBox footer = new VBox(8);
+                footer.getChildren().add(header);
+                
+                Button payButton = new Button("Efetuar Pagamento");
+                payButton.setStyle("-fx-background-color: #d97706; -fx-text-fill: white; -fx-font-weight: bold;");
+                payButton.setPrefWidth(Double.MAX_VALUE);
+                String paymentId = payment.id();
+                String projId = projectId;
+                payButton.setOnAction(event -> {
+                    if (navigator != null) {
+                        navigator.navigateTo("project-payment:" + projId + "/" + paymentId);
+                    }
+                });
+                footer.getChildren().add(payButton);
+                card.getChildren().add(footer);
+            }
+
+            paymentsContainer.getChildren().add(card);
+        }
+    }
+
     private void showNotFound() {
         contentBox.setVisible(false);
         contentBox.setManaged(false);
@@ -383,5 +473,35 @@ public class ProjectDetailController implements ClientPage {
 
     private String formatDate(LocalDate date) {
         return date == null ? "A definir" : dateFormatter.format(date);
+    }
+
+    private String phaseLabel(String phase) {
+        return switch (phase) {
+            case "design" -> "Fase 1: Design";
+            case "mold" -> "Fase 2: Molde";
+            case "production" -> "Fase 3: Producao";
+            default -> phase;
+        };
+    }
+
+    private String paymentBackground(String status) {
+        return status.equals("paid") ? "#f0fdf4" : "#fffbeb";
+    }
+
+    private String paymentBorder(String status) {
+        return status.equals("paid") ? "#bbf7d0" : "#fcd34d";
+    }
+
+    private String paymentStatusStyle(String status) {
+        return status.equals("paid")
+                ? "-fx-background-color: #dcfce7; -fx-text-fill: #166534; -fx-padding: 4 8; -fx-background-radius: 999;"
+                : "-fx-background-color: #fef3c7; -fx-text-fill: #92400e; -fx-padding: 4 8; -fx-background-radius: 999;";
+    }
+
+    private String nonBlank(String value, String fallback) {
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        return value;
     }
 }

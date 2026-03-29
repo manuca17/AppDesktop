@@ -22,6 +22,9 @@ public class ClientLayoutController implements ClientPageNavigator {
     private static final String PAGE_ORDERS = "orders";
     private static final String PAGE_PROJECT_DETAIL = "project-detail:";
     private static final String PAGE_ORDER_DETAIL = "order-detail:";
+    private static final String PAGE_CART = "cart";
+    private static final String PAGE_CHECKOUT = "checkout";
+    private static final String PAGE_PROJECT_PAYMENT = "project-payment:";
 
     @FXML
     private Label userNameLabel;
@@ -122,6 +125,13 @@ public class ClientLayoutController implements ClientPageNavigator {
             if (pageKey.startsWith(PAGE_ORDER_DETAIL) && controller instanceof OrderDetailController orderDetailController) {
                 orderDetailController.setOrderId(pageKey.substring(PAGE_ORDER_DETAIL.length()));
             }
+            if (pageKey.startsWith(PAGE_PROJECT_PAYMENT) && controller instanceof ProjectPaymentController paymentController) {
+                String ids = pageKey.substring(PAGE_PROJECT_PAYMENT.length());
+                String[] parts = ids.split("/");
+                if (parts.length == 2) {
+                    paymentController.setPaymentIds(parts[0], parts[1]);
+                }
+            }
             if (controller instanceof ClientDashboardController dashboardController) {
                 dashboardController.setClientName(userNameLabel.getText());
             }
@@ -134,20 +144,25 @@ public class ClientLayoutController implements ClientPageNavigator {
     }
 
     private String resolveFxml(String pageKey) {
-        if (pageKey.startsWith(PAGE_PROJECT_DETAIL)) {
-            return "project-detail-view.fxml";
-        }
-        if (pageKey.startsWith(PAGE_ORDER_DETAIL)) {
-            return "order-detail-view.fxml";
-        }
-
         return switch (pageKey) {
             case PAGE_CATALOG -> "catalog-view.fxml";
             case PAGE_BRIEFING -> "briefing-view.fxml";
             case PAGE_PROJECTS -> "projects-view.fxml";
             case PAGE_ORDERS -> "orders-view.fxml";
+            case PAGE_CART -> "cart-view.fxml";
+            case PAGE_CHECKOUT -> "checkout-view.fxml";
             case PAGE_DASHBOARD -> "client-dashboard-view.fxml";
-            default -> "client-dashboard-view.fxml";
+            default -> {
+                if (pageKey.startsWith(PAGE_PROJECT_DETAIL)) {
+                    yield "project-detail-view.fxml";
+                } else if (pageKey.startsWith(PAGE_ORDER_DETAIL)) {
+                    yield "order-detail-view.fxml";
+                } else if (pageKey.startsWith(PAGE_PROJECT_PAYMENT)) {
+                    yield "project-payment-view.fxml";
+                } else {
+                    yield "client-dashboard-view.fxml";
+                }
+            }
         };
     }
 
@@ -157,6 +172,9 @@ public class ClientLayoutController implements ClientPageNavigator {
         }
         if (pageKey.startsWith(PAGE_ORDER_DETAIL)) {
             return PAGE_ORDERS;
+        }
+        if (pageKey.startsWith(PAGE_PROJECT_PAYMENT)) {
+            return PAGE_PROJECTS;
         }
         return pageKey;
     }

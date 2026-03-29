@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane fitToWidth="true" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.example.appdesktop.CheckoutController"
+            style="-fx-background: transparent; -fx-background-color: transparent;">
+    <content>
+        <VBox spacing="16" style="-fx-padding: 4;">
+            <Label style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="Finalizar Compra"/>
+
+            <GridPane hgap="14" vgap="14">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="66.66"/>
+                    <ColumnConstraints percentWidth="33.34"/>
+                </columnConstraints>
+
+                <VBox GridPane.columnIndex="0" spacing="12">
+                    <VBox spacing="10" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 16; -fx-border-color: #d1d5db;">
+                        <Label style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="Informacoes de Envio"/>
+                        <HBox spacing="8">
+                            <VBox spacing="4" HBox.hgrow="ALWAYS">
+                                <Label style="-fx-text-fill: #4b5563;" text="Nome Completo *"/>
+                                <TextField fx:id="fullNameField" promptText="Maria Silva"/>
+                            </VBox>
+                            <VBox spacing="4" HBox.hgrow="ALWAYS">
+                                <Label style="-fx-text-fill: #4b5563;" text="Email *"/>
+                                <TextField fx:id="emailField" promptText="maria@example.com"/>
+                            </VBox>
+                        </HBox>
+                        <VBox spacing="4">
+                            <Label style="-fx-text-fill: #4b5563;" text="Telemovel *"/>
+                            <TextField fx:id="phoneField" promptText="912 345 678"/>
+                        </VBox>
+                        <VBox spacing="4">
+                            <Label style="-fx-text-fill: #4b5563;" text="Morada *"/>
+                            <TextField fx:id="addressField" promptText="Rua da Ceramica, nº 123"/>
+                        </VBox>
+                        <HBox spacing="8">
+                            <VBox spacing="4" HBox.hgrow="ALWAYS">
+                                <Label style="-fx-text-fill: #4b5563;" text="Cidade *"/>
+                                <TextField fx:id="cityField" promptText="Lisboa"/>
+                            </VBox>
+                            <VBox spacing="4" HBox.hgrow="ALWAYS">
+                                <Label style="-fx-text-fill: #4b5563;" text="Codigo Postal *"/>
+                                <TextField fx:id="postalCodeField" promptText="1000-000"/>
+                            </VBox>
+                        </HBox>
+                    </VBox>
+
+                    <VBox spacing="10" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 16; -fx-border-color: #d1d5db;">
+                        <Label style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="Metodo de Pagamento"/>
+
+                        <HBox spacing="8" style="-fx-border-color: #d1d5db; -fx-border-width: 1; -fx-padding: 8; -fx-background-radius: 8;">
+                            <RadioButton fx:id="mbwayRadio"/>
+                            <Label style="-fx-text-fill: #111827;" text="MBWay"/>
+                        </HBox>
+
+                        <HBox spacing="8" style="-fx-border-color: #d1d5db; -fx-border-width: 1; -fx-padding: 8; -fx-background-radius: 8;">
+                            <RadioButton fx:id="cardRadio"/>
+                            <Label style="-fx-text-fill: #111827;" text="Cartao de Credito/Debito"/>
+                        </HBox>
+
+                        <HBox spacing="8" style="-fx-border-color: #d1d5db; -fx-border-width: 1; -fx-padding: 8; -fx-background-radius: 8;">
+                            <RadioButton fx:id="multibcoRadio"/>
+                            <Label style="-fx-text-fill: #111827;" text="Multibanco"/>
+                        </HBox>
+
+                        <HBox spacing="8" style="-fx-border-color: #d1d5db; -fx-border-width: 1; -fx-padding: 8; -fx-background-radius: 8;">
+                            <RadioButton fx:id="transferRadio"/>
+                            <Label style="-fx-text-fill: #111827;" text="Transferencia Bancaria"/>
+                        </HBox>
+
+                        <VBox fx:id="mbwayDetails" spacing="6" style="-fx-background-color: #f3f4f6; -fx-background-radius: 8; -fx-padding: 10;">
+                            <Label style="-fx-text-fill: #111827;" text="Numero de Telemovel MBWay *"/>
+                            <TextField fx:id="mbwayPhoneField" promptText="912 345 678"/>
+                            <Label style="-fx-font-size: 12px; -fx-text-fill: #6b7280;" text="Sera enviada uma notificacao para o seu telemovel"/>
+                        </VBox>
+
+                        <VBox fx:id="cardDetails" managed="false" spacing="6" style="-fx-background-color: #f3f4f6; -fx-background-radius: 8; -fx-padding: 10;" visible="false">
+                            <Label style="-fx-text-fill: #111827;" text="Numero do Cartao *"/>
+                            <TextField fx:id="cardNumberField" promptText="1234 5678 9012 3456"/>
+                            <Label style="-fx-text-fill: #111827;" text="Nome no Cartao *"/>
+                            <TextField fx:id="cardNameField" promptText="MARIA SILVA"/>
+                            <HBox spacing="8">
+                                <VBox spacing="4" HBox.hgrow="ALWAYS">
+                                    <Label style="-fx-text-fill: #4b5563;" text="Validade *"/>
+                                    <TextField fx:id="cardExpiryField" promptText="MM/AA"/>
+                                </VBox>
+                                <VBox spacing="4" HBox.hgrow="ALWAYS">
+                                    <Label style="-fx-text-fill: #4b5563;" text="CVV *"/>
+                                    <TextField fx:id="cardCvvField" promptText="123"/>
+                                </VBox>
+                            </HBox>
+                        </VBox>
+
+                        <VBox fx:id="multibcoDetails" managed="false" spacing="6" style="-fx-background-color: #f3f4f6; -fx-background-radius: 8; -fx-padding: 10;" visible="false">
+                            <Label style="-fx-font-size: 12px; -fx-text-fill: #6b7280;" text="Apos submeter, recebera uma referencia Multibanco por email"/>
+                        </VBox>
+
+                        <VBox fx:id="transferDetails" managed="false" spacing="6" style="-fx-background-color: #f3f4f6; -fx-background-radius: 8; -fx-padding: 10;" visible="false">
+                            <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="Dados para transferencia bancaria:"/>
+                            <Label style="-fx-font-size: 11px; -fx-text-fill: #4b5563;" text="IBAN: PT50 0000 0000 0000 0000 0000 0"/>
+                            <Label style="-fx-font-size: 11px; -fx-text-fill: #4b5563;" text="Titular: Taca Lab"/>
+                            <Label style="-fx-font-size: 11px; -fx-text-fill: #4b5563;" text="Banco: CGD"/>
+                        </VBox>
+                    </VBox>
+
+                    <VBox spacing="10" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 16; -fx-border-color: #d1d5db;">
+                        <Label style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="Notas Adicionais (Opcional)"/>
+                        <TextArea fx:id="notesArea" prefRowCount="4" promptText="Instrucoes especiais de entrega, preferencias, etc."/>
+                    </VBox>
+                </VBox>
+
+                <VBox GridPane.columnIndex="1" spacing="10" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 16; -fx-border-color: #d1d5db;">
+                    <Label style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="Resumo da Encomenda"/>
+
+                    <HBox><Label style="-fx-text-fill: #4b5563;" text="Subtotal"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="subtotalLabel" style="-fx-text-fill: #111827;" text="EUR 0,00"/></HBox>
+                    <HBox><Label style="-fx-text-fill: #4b5563;" text="Envio"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="shippingLabel" style="-fx-text-fill: #111827;" text="EUR 5,90"/></HBox>
+
+                    <VBox style="-fx-border-color: #e5e7eb; -fx-border-width: 1 0 0 0; -fx-padding: 8 0;">
+                        <HBox><Label style="-fx-font-weight: bold; -fx-text-fill: #111827;" text="Total"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="totalLabel" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="EUR 0,00"/></HBox>
+                    </VBox>
+
+                    <Button fx:id="confirmButton" mnemonicParsing="false" onAction="#onConfirmOrder" style="-fx-background-color: #d97706; -fx-text-fill: white; -fx-font-weight: bold;" text="Confirmar Encomenda"/>
+
+                    <Label style="-fx-font-size: 11px; -fx-text-fill: #6b7280; -fx-text-alignment: center;" text="Ao confirmar a encomenda, concorda com os nossos termos e condicoes" wrapText="true"/>
+                </VBox>
+            </GridPane>
+        </VBox>
+    </content>
+</ScrollPane>
