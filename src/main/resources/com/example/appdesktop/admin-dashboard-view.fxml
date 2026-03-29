@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane fitToWidth="true" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.example.appdesktop.AdminDashboardController"
+            style="-fx-background: #f9fafb; -fx-background-color: #f9fafb;">
+    <content>
+        <VBox spacing="18">
+            <padding>
+                <Insets top="8" right="8" bottom="8" left="8"/>
+            </padding>
+
+            <VBox spacing="4">
+                <Label style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="Dashboard de Administracao"/>
+                <Label style="-fx-text-fill: #4b5563;" text="Visao geral da operacao"/>
+            </VBox>
+
+            <!-- KPI Cards -->
+            <GridPane hgap="14" vgap="14">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="25"/>
+                    <ColumnConstraints percentWidth="25"/>
+                    <ColumnConstraints percentWidth="25"/>
+                    <ColumnConstraints percentWidth="25"/>
+                </columnConstraints>
+
+                <VBox GridPane.columnIndex="0" spacing="6" style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #e5e7eb; -fx-border-radius: 10; -fx-padding: 16;">
+                    <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #6b7280;" text="PROJETOS ATIVOS"/>
+                    <Label fx:id="activeProjectsLabel" style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="0"/>
+                    <Label style="-fx-font-size: 12px; -fx-text-fill: #6b7280;" text="em desenvolvimento"/>
+                </VBox>
+
+                <VBox GridPane.columnIndex="1" spacing="6" style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #e5e7eb; -fx-border-radius: 10; -fx-padding: 16;">
+                    <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #6b7280;" text="ENCOMENDAS PENDENTES"/>
+                    <Label fx:id="pendingOrdersLabel" style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="0"/>
+                    <Label style="-fx-font-size: 12px; -fx-text-fill: #6b7280;" text="em producao"/>
+                </VBox>
+
+                <VBox GridPane.columnIndex="2" spacing="6" style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #e5e7eb; -fx-border-radius: 10; -fx-padding: 16;">
+                    <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #6b7280;" text="STOCK BAIXO"/>
+                    <Label fx:id="lowStockLabel" style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #dc2626;" text="0"/>
+                    <Label style="-fx-font-size: 12px; -fx-text-fill: #6b7280;" text="produtos com stock &lt; 5"/>
+                </VBox>
+
+                <VBox GridPane.columnIndex="3" spacing="6" style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #e5e7eb; -fx-border-radius: 10; -fx-padding: 16;">
+                    <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #6b7280;" text="RECEITA TOTAL"/>
+                    <Label fx:id="revenueLabel" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #16a34a;" text="EUR 0,00"/>
+                    <Label style="-fx-font-size: 12px; -fx-text-fill: #6b7280;" text="encomendas + projetos"/>
+                </VBox>
+            </GridPane>
+
+            <!-- Recent Orders -->
+            <VBox spacing="10" style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #e5e7eb; -fx-border-radius: 10; -fx-padding: 16;">
+                <HBox>
+                    <VBox spacing="2">
+                        <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Encomendas Recentes"/>
+                        <Label style="-fx-text-fill: #4b5563; -fx-font-size: 12px;" text="Ultimas encomendas do catalogo"/>
+                    </VBox>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button mnemonicParsing="false" onAction="#onViewAllOrders"
+                            style="-fx-background-color: transparent; -fx-border-color: #d1d5db;" text="Ver Todas"/>
+                </HBox>
+                <VBox fx:id="recentOrdersContainer" spacing="8"/>
+            </VBox>
+
+            <!-- Active Projects -->
+            <VBox spacing="10" style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #e5e7eb; -fx-border-radius: 10; -fx-padding: 16;">
+                <HBox>
+                    <VBox spacing="2">
+                        <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Projetos em Curso"/>
+                        <Label style="-fx-text-fill: #4b5563; -fx-font-size: 12px;" text="Projetos que estao em desenvolvimento"/>
+                    </VBox>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button mnemonicParsing="false" onAction="#onViewAllProjects"
+                            style="-fx-background-color: transparent; -fx-border-color: #d1d5db;" text="Ver Todos"/>
+                </HBox>
+                <VBox fx:id="activeProjectsContainer" spacing="8"/>
+            </VBox>
+
+            <!-- Quick Actions -->
+            <GridPane hgap="14">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="50"/>
+                    <ColumnConstraints percentWidth="50"/>
+                </columnConstraints>
+
+                <VBox GridPane.columnIndex="0" spacing="10"
+                      style="-fx-background-color: linear-gradient(to bottom right, #ede9fe, #ddd6fe); -fx-border-color: #c4b5fd; -fx-background-radius: 10; -fx-border-radius: 10; -fx-padding: 16;">
+                    <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Gerir Produtos"/>
+                    <Label style="-fx-text-fill: #4b5563;" text="Adicionar, editar ou remover produtos do catalogo"/>
+                    <Button mnemonicParsing="false" onAction="#onManageCatalog"
+                            style="-fx-background-color: #7c3aed; -fx-text-fill: white; -fx-font-weight: bold;" text="Ir para Produtos"/>
+                </VBox>
+
+                <VBox GridPane.columnIndex="1" spacing="10"
+                      style="-fx-background-color: linear-gradient(to bottom right, #dbeafe, #e0e7ff); -fx-border-color: #93c5fd; -fx-background-radius: 10; -fx-border-radius: 10; -fx-padding: 16;">
+                    <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Gerir Encomendas"/>
+                    <Label style="-fx-text-fill: #4b5563;" text="Acompanhar e atualizar o estado das encomendas"/>
+                    <Button mnemonicParsing="false" onAction="#onViewAllOrders"
+                            style="-fx-background-color: #2563eb; -fx-text-fill: white; -fx-font-weight: bold;" text="Ir para Encomendas"/>
+                </VBox>
+            </GridPane>
+        </VBox>
+    </content>
+</ScrollPane>

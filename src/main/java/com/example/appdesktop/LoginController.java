@@ -7,8 +7,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.VBox;
-import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -38,22 +36,27 @@ public class LoginController {
     private void onAdminLogin() {
         String email = adminEmailField.getText();
 
-        navigateToArea("Administrador", email);
+        navigateToAdminDashboard(email);
     }
 
-    private void navigateToArea(String role, String email) {
-        Text title = new Text("Bem-vindo ao portal " + role);
-        title.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
+    private void navigateToAdminDashboard(String email) {
+        try {
+            FXMLLoader loader = new FXMLLoader(HelloApplication.class.getResource("admin-layout-view.fxml"));
+            Parent root = loader.load();
 
-        Text subtitle = new Text("Utilizador: " + email);
-        subtitle.setStyle("-fx-font-size: 14px; -fx-fill: #4b5563;");
+            AdminLayoutController controller = loader.getController();
+            controller.setAdminIdentity(resolveDisplayName(email), "Administrador");
 
-        VBox root = new VBox(12, title, subtitle);
-        root.setStyle("-fx-alignment: center; -fx-padding: 40; -fx-background-color: #fff7ed;");
-
-        Stage stage = resolveStage();
-        stage.setScene(new Scene(root, 900, 620));
-        stage.setTitle("Taca Lab - " + role);
+            Stage stage = resolveStage();
+            stage.setScene(new Scene(root, 1000, 720));
+            stage.setTitle("Taca Lab - Administracao");
+        } catch (IOException ex) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Erro");
+            alert.setHeaderText("Nao foi possivel abrir o painel de administracao");
+            alert.setContentText(ex.getMessage());
+            alert.showAndWait();
+        }
     }
 
     private void navigateToClientDashboard(String email) {
