@@ -154,11 +154,6 @@ public class CatalogController implements ClientPage {
         cartCount += 1;
         updateCartButton();
 
-        if (navigator != null) {
-            navigator.navigateTo("cart");
-            return;
-        }
-
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Carrinho");
         alert.setHeaderText("Produto adicionado");

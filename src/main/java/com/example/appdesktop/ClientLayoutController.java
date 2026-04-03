@@ -1,5 +1,6 @@
 package com.example.appdesktop;
 
+import com.example.appdesktop.services.UtilizadorService;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -39,6 +40,9 @@ public class ClientLayoutController implements ClientPageNavigator {
     private Button catalogButton;
 
     @FXML
+    private Button cartButton;
+
+    @FXML
     private Button briefingButton;
 
     @FXML
@@ -51,11 +55,13 @@ public class ClientLayoutController implements ClientPageNavigator {
     private StackPane contentPane;
 
     private final Map<String, Button> navButtons = new HashMap<>();
+    private final UtilizadorService utilizadorService = UtilizadorService.getInstance();
 
     @FXML
     private void initialize() {
         navButtons.put(PAGE_DASHBOARD, dashboardButton);
         navButtons.put(PAGE_CATALOG, catalogButton);
+        navButtons.put(PAGE_CART, cartButton);
         navButtons.put(PAGE_BRIEFING, briefingButton);
         navButtons.put(PAGE_PROJECTS, projectsButton);
         navButtons.put(PAGE_ORDERS, ordersButton);
@@ -78,6 +84,11 @@ public class ClientLayoutController implements ClientPageNavigator {
     }
 
     @FXML
+    private void onCart() {
+        openPage(PAGE_CART);
+    }
+
+    @FXML
     private void onBriefing() {
         openPage(PAGE_BRIEFING);
     }
@@ -95,6 +106,7 @@ public class ClientLayoutController implements ClientPageNavigator {
     @FXML
     private void onLogout() {
         try {
+            utilizadorService.logout();
             Parent loginRoot = new FXMLLoader(HelloApplication.class.getResource("login-view.fxml")).load();
             Stage stage = (Stage) contentPane.getScene().getWindow();
             stage.getScene().setRoot(loginRoot);

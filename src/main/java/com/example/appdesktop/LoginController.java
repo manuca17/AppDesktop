@@ -1,10 +1,13 @@
 package com.example.appdesktop;
 
+import com.example.appdesktop.models.Utilizador;
+import com.example.appdesktop.services.UtilizadorService;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
@@ -13,11 +16,16 @@ import java.io.IOException;
 
 public class LoginController {
 
+    private final UtilizadorService utilizadorService = UtilizadorService.getInstance();
+
     @FXML
     private TextField clientEmailField;
 
     @FXML
     private PasswordField clientPasswordField;
+
+    @FXML
+    private Button clientLoginButton;
 
     @FXML
     private TextField adminEmailField;
@@ -26,26 +34,56 @@ public class LoginController {
     private PasswordField adminPasswordField;
 
     @FXML
-    private void onClientLogin() {
-        String email = clientEmailField.getText();
+    private Button adminLoginButton;
 
-        navigateToClientDashboard(email);
+    @FXML
+    private void onClientLogin() {
+        handleLogin(clientEmailField.getText(), clientPasswordField.getText(), false);
     }
 
     @FXML
     private void onAdminLogin() {
-        String email = adminEmailField.getText();
-
-        navigateToAdminDashboard(email);
+        handleLogin(adminEmailField.getText(), adminPasswordField.getText(), true);
     }
 
-    private void navigateToAdminDashboard(String email) {
+    private void handleLogin(String email, String password, boolean adminAccess) {
+        if (email == null || email.isBlank() || password == null || password.isBlank()) {
+            showAlert(Alert.AlertType.WARNING, "Dados invalidos", "Preencha email e password.");
+            return;
+        }
+
+        setLoading(true);
+        utilizadorService.login(email, password).whenComplete((utilizador, error) -> javafx.application.Platform.runLater(() -> {
+            setLoading(false);
+
+            if (error != null) {
+                String message = error.getCause() != null && error.getCause().getMessage() != null
+                        ? error.getCause().getMessage()
+                        : error.getMessage();
+                showAlert(Alert.AlertType.WARNING, "Login falhou", message == null ? "Credenciais invalidas." : message);
+                return;
+            }
+
+            if (utilizador == null) {
+                showAlert(Alert.AlertType.WARNING, "Login falhou", "Credenciais invalidas.");
+                return;
+            }
+
+            if (adminAccess) {
+                navigateToAdminDashboard(utilizador);
+            } else {
+                navigateToClientDashboard(utilizador);
+            }
+        }));
+    }
+
+    private void navigateToAdminDashboard(Utilizador utilizador) {
         try {
             FXMLLoader loader = new FXMLLoader(HelloApplication.class.getResource("admin-layout-view.fxml"));
             Parent root = loader.load();
 
             AdminLayoutController controller = loader.getController();
-            controller.setAdminIdentity(resolveDisplayName(email), "Administrador");
+            controller.setAdminIdentity(resolveDisplayName(utilizador.getEmail()), defaultCompany(utilizador.getNomeEmpresa(), "Administrador"));
 
             Stage stage = resolveStage();
             stage.setScene(new Scene(root, 1000, 720));
@@ -59,13 +97,13 @@ public class LoginController {
         }
     }
 
-    private void navigateToClientDashboard(String email) {
+    private void navigateToClientDashboard(Utilizador utilizador) {
         try {
             FXMLLoader loader = new FXMLLoader(HelloApplication.class.getResource("client-layout-view.fxml"));
             Parent root = loader.load();
 
             ClientLayoutController controller = loader.getController();
-            controller.setClientIdentity(resolveDisplayName(email), "Conta Cliente");
+            controller.setClientIdentity(resolveDisplayName(utilizador.getEmail()), defaultCompany(utilizador.getNomeEmpresa(), "Conta Cliente"));
 
             Stage stage = resolveStage();
             stage.setScene(new Scene(root, 1000, 720));
@@ -100,5 +138,29 @@ public class LoginController {
             return (Stage) adminEmailField.getScene().getWindow();
         }
         throw new IllegalStateException("Stage not available.");
+    }
+
+    private String defaultCompany(String nomeEmpresa, String fallback) {
+        if (nomeEmpresa == null || nomeEmpresa.isBlank()) {
+            return fallback;
+        }
+        return nomeEmpresa;
+    }
+
+    private void setLoading(boolean loading) {
+        if (clientLoginButton != null) {
+            clientLoginButton.setDisable(loading);
+        }
+        if (adminLoginButton != null) {
+            adminLoginButton.setDisable(loading);
+        }
+    }
+
+    private void showAlert(Alert.AlertType type, String header, String details) {
+        Alert alert = new Alert(type);
+        alert.setTitle(type == Alert.AlertType.ERROR ? "Erro" : "Aviso");
+        alert.setHeaderText(header);
+        alert.setContentText(details);
+        alert.showAndWait();
     }
 }

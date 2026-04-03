@@ -1,5 +1,6 @@
 package com.example.appdesktop;
 
+import com.example.appdesktop.services.UtilizadorService;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -29,6 +30,7 @@ public class AdminLayoutController implements AdminPageNavigator {
     @FXML private StackPane contentPane;
 
     private final Map<String, Button> navButtons = new HashMap<>();
+    private final UtilizadorService utilizadorService = UtilizadorService.getInstance();
 
     @FXML
     private void initialize() {
@@ -52,6 +54,7 @@ public class AdminLayoutController implements AdminPageNavigator {
     @FXML
     private void onLogout() {
         try {
+            utilizadorService.logout();
             Parent loginRoot = new FXMLLoader(HelloApplication.class.getResource("login-view.fxml")).load();
             Stage stage = (Stage) contentPane.getScene().getWindow();
             stage.getScene().setRoot(loginRoot);

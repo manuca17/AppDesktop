@@ -57,6 +57,7 @@ public class ClientDashboardService {
 
     public String statusLabel(String status) {
         return switch (status) {
+            case "briefing" -> "Em Analise";
             case "in_production" -> "Em Producao";
             case "quote_sent" -> "Orcamento Enviado";
             case "approved" -> "Aprovado";

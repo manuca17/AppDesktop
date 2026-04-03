@@ -42,6 +42,9 @@
             <Button fx:id="catalogButton" mnemonicParsing="false" onAction="#onCatalog"
                     style="-fx-alignment: center-left; -fx-background-color: transparent; -fx-padding: 10 12;"
                     text="Catalogo"/>
+            <Button fx:id="cartButton" mnemonicParsing="false" onAction="#onCart"
+                    style="-fx-alignment: center-left; -fx-background-color: transparent; -fx-padding: 10 12;"
+                    text="Carrinho"/>
             <Button fx:id="briefingButton" mnemonicParsing="false" onAction="#onBriefing"
                     style="-fx-alignment: center-left; -fx-background-color: transparent; -fx-padding: 10 12;"
                     text="Novo Briefing"/>

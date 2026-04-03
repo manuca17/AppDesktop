@@ -1,5 +1,9 @@
 package com.example.appdesktop;
 
+import com.example.appdesktop.models.ProjetoPersonalizado;
+import com.example.appdesktop.models.Utilizador;
+import com.example.appdesktop.services.ProjetoPersonalizadoService;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
@@ -9,7 +13,10 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
+import java.math.BigDecimal;
 import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
@@ -23,6 +30,7 @@ public class ProjectsController implements ClientPage {
     private Label emptyLabel;
 
     private final ClientPortalDataService dataService = new ClientPortalDataService();
+    private final ProjetoPersonalizadoService projetoPersonalizadoService = ProjetoPersonalizadoService.getInstance();
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private final NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("pt", "PT"));
 
@@ -30,7 +38,7 @@ public class ProjectsController implements ClientPage {
 
     @FXML
     private void initialize() {
-        renderProjects(dataService.mockProjects());
+        loadProjectsForCurrentUser();
     }
 
     @Override
@@ -45,18 +53,57 @@ public class ProjectsController implements ClientPage {
         }
     }
 
-    private void renderProjects(List<ClientPortalDataService.ProjectItem> projects) {
+    private void loadProjectsForCurrentUser() {
+        Utilizador currentUser = Utilizador.getCurrentUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            renderProjects(List.of());
+            return;
+        }
+
+        projetoPersonalizadoService.findByUtilizadorId(currentUser.getId())
+                .whenComplete((projects, error) -> Platform.runLater(() -> {
+                    if (error != null) {
+                        renderProjects(List.of());
+                        return;
+                    }
+                    renderProjects(mapProjects(projects));
+                }));
+    }
+
+    private List<ProjectCardData> mapProjects(List<ProjetoPersonalizado> projects) {
+        if (projects == null || projects.isEmpty()) {
+            return List.of();
+        }
+
+        return projects.stream()
+                .map(project -> new ProjectCardData(
+                        project.getId() == null ? "PRJ-?" : "PRJ-" + project.getId(),
+                        project.getTituloProjeto() == null || project.getTituloProjeto().isBlank()
+                                ? "Projeto personalizado"
+                                : project.getTituloProjeto(),
+                        normalizeStatus(project.getEstadoAtual()),
+                        project.getBriefing() == null || project.getBriefing().isBlank()
+                                ? "Sem briefing disponivel."
+                                : project.getBriefing(),
+                        project.getDataCriacao() == null
+                                ? LocalDate.now()
+                                : project.getDataCriacao().atZone(ZoneId.systemDefault()).toLocalDate()
+                ))
+                .toList();
+    }
+
+    private void renderProjects(List<ProjectCardData> projects) {
         projectsContainer.getChildren().clear();
 
         emptyLabel.setVisible(projects.isEmpty());
         emptyLabel.setManaged(projects.isEmpty());
 
-        for (ClientPortalDataService.ProjectItem project : projects) {
+        for (ProjectCardData project : projects) {
             projectsContainer.getChildren().add(createCard(project));
         }
     }
 
-    private VBox createCard(ClientPortalDataService.ProjectItem project) {
+    private VBox createCard(ProjectCardData project) {
         VBox card = new VBox(10);
         card.setPadding(new Insets(14));
         card.setStyle("-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 10; -fx-background-radius: 10;");
@@ -77,16 +124,16 @@ public class ProjectsController implements ClientPage {
         description.setStyle("-fx-text-fill: #4b5563;");
 
         HBox stats = new HBox(16,
-                stat("Quantidade", project.quantity() + " pecas"),
-                stat("Valor", currencyFormat.format(project.quote().total())),
-                stat("Mensagens", String.valueOf(project.messagesCount()))
+                stat("Quantidade", "--"),
+                stat("Valor", currencyFormat.format(BigDecimal.ZERO)),
+                stat("Mensagens", "--")
         );
 
         Label timeline = new Label("Criado em " + dateFormatter.format(project.createdAt())
-                + "   |   Fase atual: " + stageLabel(project.currentStage()));
+                + "   |   Fase atual: " + stageLabel(project.status()));
         timeline.setStyle("-fx-font-size: 12px; -fx-text-fill: #6b7280;");
 
-        ProgressBar progressBar = new ProgressBar(completion(project.stages()));
+        ProgressBar progressBar = new ProgressBar(completion(project.status()));
         progressBar.setPrefWidth(Double.MAX_VALUE);
 
         Button detailsButton = new Button("Ver Detalhes do Projeto");
@@ -105,24 +152,44 @@ public class ProjectsController implements ClientPage {
         return new VBox(2, l, v);
     }
 
-    private double completion(List<String> stages) {
-        if (stages == null || stages.isEmpty()) {
-            return 0;
-        }
-
-        long done = stages.stream().filter(s -> "completed".equals(s)).count();
-        long inProgress = stages.stream().filter(s -> "in_progress".equals(s)).count();
-        return (done + (inProgress > 0 ? 0.5 : 0.0)) / stages.size();
+    private double completion(String status) {
+        return switch (status) {
+            case "briefing" -> 0.1;
+            case "quote_sent" -> 0.3;
+            case "approved" -> 0.5;
+            case "in_production" -> 0.75;
+            case "completed" -> 1.0;
+            default -> 0.0;
+        };
     }
 
     private String stageLabel(String stage) {
         return switch (stage) {
+            case "briefing" -> "Briefing";
+            case "quote_sent" -> "Orcamento";
+            case "approved" -> "Aprovado";
+            case "in_production" -> "Em Producao";
+            case "completed" -> "Concluido";
             case "molding" -> "Moldagem";
             case "drying" -> "Secagem";
             case "first_firing" -> "Primeira Cozedura";
             case "glazing" -> "Vidragem";
             case "second_firing" -> "Segunda Cozedura";
             default -> "Acabamento";
+        };
+    }
+
+    private String normalizeStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return "briefing";
+        }
+        return switch (status.trim().toLowerCase(Locale.ROOT)) {
+            case "em_analise", "analise", "briefing" -> "briefing";
+            case "orcamento_enviado", "quote_sent" -> "quote_sent";
+            case "aprovado", "approved" -> "approved";
+            case "em_producao", "in_production" -> "in_production";
+            case "concluido", "completed" -> "completed";
+            default -> status.trim().toLowerCase(Locale.ROOT);
         };
     }
 
@@ -141,5 +208,14 @@ public class ProjectsController implements ClientPage {
         if (navigator != null) {
             navigator.navigateTo("project-detail:" + projectId);
         }
+    }
+
+    private record ProjectCardData(
+            String id,
+            String title,
+            String status,
+            String description,
+            LocalDate createdAt
+    ) {
     }
 }

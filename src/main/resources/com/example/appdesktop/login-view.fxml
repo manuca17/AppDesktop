@@ -55,7 +55,7 @@
                                         </children>
                                     </VBox>
 
-                                    <Button mnemonicParsing="false" onAction="#onClientLogin"
+                                    <Button fx:id="clientLoginButton" mnemonicParsing="false" onAction="#onClientLogin"
                                             style="-fx-background-color: #d97706; -fx-text-fill: white; -fx-font-weight: bold;"
                                             text="Entrar como Cliente"/>
 
@@ -86,7 +86,7 @@
                                         </children>
                                     </VBox>
 
-                                    <Button mnemonicParsing="false" onAction="#onAdminLogin"
+                                    <Button fx:id="adminLoginButton" mnemonicParsing="false" onAction="#onAdminLogin"
                                             style="-fx-background-color: #d97706; -fx-text-fill: white; -fx-font-weight: bold;"
                                             text="Entrar como Administrador"/>
                                     <Region prefHeight="8"/>
