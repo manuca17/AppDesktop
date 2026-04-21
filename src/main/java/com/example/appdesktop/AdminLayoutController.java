@@ -20,6 +20,7 @@ public class AdminLayoutController implements AdminPageNavigator {
     private static final String PAGE_CATALOG   = "admin-catalog";
     private static final String PAGE_PROJECTS  = "admin-projects";
     private static final String PAGE_ORDERS    = "admin-orders";
+    private static final String PAGE_MEETINGS  = "admin-meetings";
 
     @FXML private Label adminNameLabel;
     @FXML private Label adminRoleLabel;
@@ -27,6 +28,7 @@ public class AdminLayoutController implements AdminPageNavigator {
     @FXML private Button catalogButton;
     @FXML private Button projectsButton;
     @FXML private Button ordersButton;
+    @FXML private Button meetingsButton;
     @FXML private StackPane contentPane;
 
     private final Map<String, Button> navButtons = new HashMap<>();
@@ -38,6 +40,7 @@ public class AdminLayoutController implements AdminPageNavigator {
         navButtons.put(PAGE_CATALOG,   catalogButton);
         navButtons.put(PAGE_PROJECTS,  projectsButton);
         navButtons.put(PAGE_ORDERS,    ordersButton);
+        navButtons.put(PAGE_MEETINGS,  meetingsButton);
         openPage(PAGE_DASHBOARD);
     }
 
@@ -50,6 +53,7 @@ public class AdminLayoutController implements AdminPageNavigator {
     @FXML private void onCatalog()    { openPage(PAGE_CATALOG); }
     @FXML private void onProjects()   { openPage(PAGE_PROJECTS); }
     @FXML private void onOrders()     { openPage(PAGE_ORDERS); }
+    @FXML private void onMeetings()   { openPage(PAGE_MEETINGS); }
 
     @FXML
     private void onLogout() {
@@ -91,6 +95,7 @@ public class AdminLayoutController implements AdminPageNavigator {
             case PAGE_CATALOG  -> "admin-catalog-view.fxml";
             case PAGE_PROJECTS -> "admin-projects-view.fxml";
             case PAGE_ORDERS   -> "admin-orders-view.fxml";
+            case PAGE_MEETINGS -> "admin-meetings-view.fxml";
             default            -> "admin-dashboard-view.fxml";
         };
     }

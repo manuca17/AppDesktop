@@ -63,6 +63,9 @@
                                     <VBox spacing="8" style="-fx-background-color: white; -fx-background-radius: 8; -fx-padding: 12;">
                                         <HBox>
                                             <Label style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="Orcamento"/>
+                                            <Region HBox.hgrow="ALWAYS"/>
+                                            <Button fx:id="reorderButton" mnemonicParsing="false" onAction="#onReorderProject"
+                                                    style="-fx-background-color: #2563eb; -fx-text-fill: white;" text="Reencomendar"/>
                                         </HBox>
                                         <GridPane hgap="8" vgap="8">
                                             <columnConstraints>
@@ -96,19 +99,6 @@
                             </content>
                         </Tab>
 
-                        <Tab text="Briefing">
-                            <content>
-                                <VBox spacing="10" style="-fx-padding: 12; -fx-background-color: white;">
-                                    <Label style="-fx-text-fill: #6b7280;" text="Tipo de Projeto"/>
-                                    <Label fx:id="briefingTypeLabel" style="-fx-font-weight: bold; -fx-text-fill: #111827;" text="--"/>
-                                    <Label style="-fx-text-fill: #6b7280;" text="Orcamento"/>
-                                    <Label fx:id="briefingBudgetLabel" style="-fx-font-weight: bold; -fx-text-fill: #111827;" text="EUR 0,00"/>
-                                    <Label style="-fx-text-fill: #6b7280;" text="Descricao"/>
-                                    <Label fx:id="briefingDescriptionLabel" style="-fx-text-fill: #111827;" wrapText="true" text="--"/>
-                                </VBox>
-                            </content>
-                        </Tab>
-
                         <Tab text="Tracking">
                             <content>
                                 <VBox spacing="10" style="-fx-padding: 12; -fx-background-color: white;">
@@ -126,7 +116,6 @@
                         <Tab text="Reunioes">
                             <content>
                                 <VBox spacing="10" style="-fx-padding: 12; -fx-background-color: white;">
-                                    <Button mnemonicParsing="false" onAction="#onConfirmFirstMeeting" style="-fx-background-color: #16a34a; -fx-text-fill: white;" text="Confirmar Presenca"/>
                                     <VBox fx:id="meetingsContainer" spacing="8"/>
                                 </VBox>
                             </content>
@@ -135,7 +124,11 @@
                         <Tab text="Chat">
                             <content>
                                 <VBox spacing="10" style="-fx-padding: 12; -fx-background-color: white;">
-                                    <VBox fx:id="messagesContainer" spacing="8"/>
+                                    <ScrollPane fitToWidth="true" prefViewportHeight="320" style="-fx-background: white; -fx-background-color: white; -fx-border-color: #e5e7eb; -fx-border-radius: 8; -fx-background-radius: 8;">
+                                        <content>
+                                            <VBox fx:id="messagesContainer" spacing="8" style="-fx-padding: 8;"/>
+                                        </content>
+                                    </ScrollPane>
                                     <HBox spacing="8">
                                         <TextField fx:id="newMessageField" promptText="Escreva a sua mensagem..." HBox.hgrow="ALWAYS"/>
                                         <Button mnemonicParsing="false" onAction="#onSendMessage" style="-fx-background-color: #d97706; -fx-text-fill: white;" text="Enviar"/>

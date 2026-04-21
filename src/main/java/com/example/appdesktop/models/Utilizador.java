@@ -8,6 +8,7 @@ public class Utilizador {
     private String nomeEmpresa;
     private String nif;
     private String email;
+    private String perfil;
     private String password;
     private String telefone;
     private String moradaFaturacao;
@@ -42,6 +43,14 @@ public class Utilizador {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getPerfil() {
+        return perfil;
+    }
+
+    public void setPerfil(String perfil) {
+        this.perfil = perfil;
     }
 
     public String getPassword() {

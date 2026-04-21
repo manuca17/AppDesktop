@@ -53,7 +53,11 @@ public class LoginController {
         }
 
         setLoading(true);
-        utilizadorService.login(email, password).whenComplete((utilizador, error) -> javafx.application.Platform.runLater(() -> {
+        java.util.concurrent.CompletableFuture<Utilizador> loginFuture = adminAccess
+                ? utilizadorService.loginAdmin(email, password)
+                : utilizadorService.loginClient(email, password);
+
+        loginFuture.whenComplete((utilizador, error) -> javafx.application.Platform.runLater(() -> {
             setLoading(false);
 
             if (error != null) {
@@ -69,7 +73,7 @@ public class LoginController {
                 return;
             }
 
-            if (adminAccess) {
+            if (isAdminProfile(utilizador, adminAccess)) {
                 navigateToAdminDashboard(utilizador);
             } else {
                 navigateToClientDashboard(utilizador);
@@ -83,7 +87,7 @@ public class LoginController {
             Parent root = loader.load();
 
             AdminLayoutController controller = loader.getController();
-            controller.setAdminIdentity(resolveDisplayName(utilizador.getEmail()), defaultCompany(utilizador.getNomeEmpresa(), "Administrador"));
+            controller.setAdminIdentity(resolveDisplayName(utilizador), defaultCompany(utilizador.getNomeEmpresa(), "Administrador"));
 
             Stage stage = resolveStage();
             stage.setScene(new Scene(root, 1000, 720));
@@ -103,7 +107,7 @@ public class LoginController {
             Parent root = loader.load();
 
             ClientLayoutController controller = loader.getController();
-            controller.setClientIdentity(resolveDisplayName(utilizador.getEmail()), defaultCompany(utilizador.getNomeEmpresa(), "Conta Cliente"));
+            controller.setClientIdentity(resolveDisplayName(utilizador), defaultCompany(utilizador.getNomeEmpresa(), "Conta Cliente"));
 
             Stage stage = resolveStage();
             stage.setScene(new Scene(root, 1000, 720));
@@ -117,7 +121,13 @@ public class LoginController {
         }
     }
 
-    private String resolveDisplayName(String email) {
+    private String resolveDisplayName(Utilizador utilizador) {
+        if (utilizador != null && utilizador.getNomeEmpresa() != null && !utilizador.getNomeEmpresa().isBlank()) {
+            String raw = utilizador.getNomeEmpresa().trim();
+            return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
+        }
+
+        String email = utilizador == null ? null : utilizador.getEmail();
         if (email == null || email.isBlank()) {
             return "Cliente";
         }
@@ -129,6 +139,7 @@ public class LoginController {
 
         return Character.toUpperCase(localPart.charAt(0)) + localPart.substring(1);
     }
+
 
     private Stage resolveStage() {
         if (clientEmailField != null && clientEmailField.getScene() != null) {
@@ -145,6 +156,18 @@ public class LoginController {
             return fallback;
         }
         return nomeEmpresa;
+    }
+
+    private boolean isAdminProfile(Utilizador utilizador, boolean adminAccessFallback) {
+        if (utilizador == null) {
+            return adminAccessFallback;
+        }
+
+        String perfil = utilizador.getPerfil();
+        if (perfil != null && !perfil.isBlank()) {
+            return "ARTESA".equalsIgnoreCase(perfil) || "ADMIN".equalsIgnoreCase(perfil);
+        }
+        return adminAccessFallback;
     }
 
     private void setLoading(boolean loading) {

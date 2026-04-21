@@ -1,5 +1,11 @@
 package com.example.appdesktop;
 
+import com.example.appdesktop.models.Orcamento;
+import com.example.appdesktop.models.ProjetoPersonalizado;
+import com.example.appdesktop.models.Utilizador;
+import com.example.appdesktop.services.OrcamentoService;
+import com.example.appdesktop.services.PagamentoService;
+import com.example.appdesktop.services.ProjetoPersonalizadoService;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -18,7 +24,6 @@ import javafx.scene.layout.VBox;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Locale;
 
 public class ProjectPaymentController implements ClientPage {
@@ -92,14 +97,16 @@ public class ProjectPaymentController implements ClientPage {
     @FXML
     private Button submitButton;
 
-    private final ClientPortalDataService dataService = new ClientPortalDataService();
+    private final ProjetoPersonalizadoService projetoService = ProjetoPersonalizadoService.getInstance();
+    private final OrcamentoService orcamentoService = OrcamentoService.getInstance();
+    private final PagamentoService pagamentoService = PagamentoService.getInstance();
     private final NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("pt", "PT"));
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd MMMM yyyy", new Locale("pt", "PT"));
 
     private ClientPageNavigator navigator;
     private String projectId;
     private String paymentId;
-    private ClientPortalDataService.Payment payment;
+    private Orcamento payment;
     private boolean isProcessing;
     private ToggleGroup paymentMethodGroup;
 
@@ -132,26 +139,35 @@ public class ProjectPaymentController implements ClientPage {
             return;
         }
 
+        if (isProcessing) {
+            return;
+        }
+        if (payment == null || payment.getId() == null) {
+            showError("Pagamento", "Orcamento invalido.");
+            return;
+        }
+
         isProcessing = true;
         submitButton.setDisable(true);
         submitButton.setText("A processar...");
 
-        javafx.application.Platform.runLater(() -> {
-            try {
-                Thread.sleep(2500);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+        String tipoPagamento = resolvePaymentMethodCode(paymentMethodGroup == null ? null : paymentMethodGroup.getSelectedToggle());
+        pagamentoService.payOrcamento(payment.getId(), tipoPagamento)
+                .whenComplete((done, error) -> javafx.application.Platform.runLater(() -> {
+                    isProcessing = false;
+                    submitButton.setDisable(false);
+                    submitButton.setText("Processar Pagamento");
 
-            showSuccess("Pagamento processado com sucesso!");
-            isProcessing = false;
-            submitButton.setDisable(false);
-            submitButton.setText("Processar Pagamento");
+                    if (error != null) {
+                        showError("Erro ao processar pagamento", error.getCause() == null ? error.getMessage() : error.getCause().getMessage());
+                        return;
+                    }
 
-            if (navigator != null) {
-                navigator.navigateTo("project-detail:" + projectId);
-            }
-        });
+                    showSuccess("Pagamento processado com sucesso!");
+                    if (navigator != null) {
+                        navigator.navigateTo("project-detail:" + projectId);
+                    }
+                }));
     }
 
     private void refresh() {
@@ -159,32 +175,57 @@ public class ProjectPaymentController implements ClientPage {
             return;
         }
 
-        ClientPortalDataService.ProjectItem project = dataService.findProjectById(projectId).orElse(null);
-        List<ClientPortalDataService.Payment> payments = dataService.projectPayments(projectId);
-        payment = payments.stream().filter(p -> p.id().equalsIgnoreCase(paymentId)).findFirst().orElse(null);
-
-        if (project == null || payment == null) {
-            showError("Pagamento", "Projeto ou pagamento não encontrado");
-            if (navigator != null) {
-                navigator.navigateTo("projects");
-            }
+        Integer projectNumericId = extractNumericId(projectId);
+        Integer paymentNumericId = extractNumericId(paymentId);
+        Utilizador currentUser = Utilizador.getCurrentUser();
+        if (projectNumericId == null || paymentNumericId == null || currentUser == null || currentUser.getId() == null) {
+            showError("Pagamento", "Projeto ou orcamento invalido.");
             return;
         }
 
-        projectNameLabel.setText(project.title());
-        projectIdLabel.setText(project.id());
-        String phaseName = phaseLabel(payment.phase());
-        String phaseDescription = phaseDescription(payment.phase());
+        projetoService.findByUtilizadorId(currentUser.getId())
+                .thenCombine(orcamentoService.findById(paymentNumericId), (projects, quote) -> {
+                    ProjetoPersonalizado selectedProject = projects.stream()
+                            .filter(p -> p != null && projectNumericId.equals(p.getId()))
+                            .findFirst()
+                            .orElse(null);
+                    return new Object[]{selectedProject, quote};
+                })
+                .whenComplete((result, error) -> javafx.application.Platform.runLater(() -> {
+                    if (error != null || result == null) {
+                        showError("Pagamento", "Projeto ou orcamento nao encontrado.");
+                        return;
+                    }
 
-        phaseInfoLabel.setText(phaseName);
-        phaseInfoDescriptionLabel.setText(phaseDescription);
-        phaseSummaryLabel.setText(phaseName);
-        phaseSummaryDescriptionLabel.setText(phaseDescription);
-        amountLabel.setText(currencyFormat.format(payment.amount()));
+                    ProjetoPersonalizado project = (ProjetoPersonalizado) result[0];
+                    payment = (Orcamento) result[1];
+                    if (project == null || payment == null) {
+                        showError("Pagamento", "Projeto ou orcamento nao encontrado.");
+                        if (navigator != null) {
+                            navigator.navigateTo("projects");
+                        }
+                        return;
+                    }
 
-        if (payment.dueDate() != null) {
-            dueDateLabel.setText("Vencimento: " + dateFormatter.format(payment.dueDate()));
-        }
+                    projectNameLabel.setText(project.getTituloProjeto() == null ? "Projeto personalizado" : project.getTituloProjeto());
+                    projectIdLabel.setText("PRJ-" + project.getId());
+
+                    String phase = normalizePhase(payment.getTipo());
+                    String phaseName = phaseLabel(phase);
+                    String phaseDescription = phaseDescription(phase);
+                    phaseInfoLabel.setText(phaseName);
+                    phaseInfoDescriptionLabel.setText(phaseDescription);
+                    phaseSummaryLabel.setText(phaseName);
+                    phaseSummaryDescriptionLabel.setText(phaseDescription);
+
+                    amountLabel.setText(currencyFormat.format(payment.getValorTotalEstimado() == null ? java.math.BigDecimal.ZERO : payment.getValorTotalEstimado()));
+
+                    if (payment.getDataEnvio() != null) {
+                        dueDateLabel.setText("Emitido em: " + dateFormatter.format(payment.getDataEnvio().atZone(java.time.ZoneId.systemDefault()).toLocalDate()));
+                    } else {
+                        dueDateLabel.setText("Emitido em: --");
+                    }
+                }));
     }
 
     private void setupPaymentMethodToggle() {
@@ -212,6 +253,15 @@ public class ProjectPaymentController implements ClientPage {
             return "mbway";
         }
         return toggle.getUserData().toString();
+    }
+
+    private String resolvePaymentMethodCode(Toggle toggle) {
+        String method = resolvePaymentMethod(toggle);
+        return switch (method) {
+            case "card" -> "cartao";
+            case "transfer" -> "transferencia";
+            default -> method;
+        };
     }
 
     private void showPaymentMethod(String method) {
@@ -262,8 +312,8 @@ public class ProjectPaymentController implements ClientPage {
     private String phaseLabel(String phase) {
         return switch (phase) {
             case "design" -> "Fase 1: Design";
-            case "mold" -> "Fase 2: Molde";
-            case "production" -> "Fase 3: Produção";
+            case "mold", "molde" -> "Fase 2: Molde";
+            case "production", "producao" -> "Fase 3: Producao";
             default -> phase;
         };
     }
@@ -271,9 +321,37 @@ public class ProjectPaymentController implements ClientPage {
     private String phaseDescription(String phase) {
         return switch (phase) {
             case "design" -> "Desenvolvimento do conceito e aprovação de protótipos";
-            case "mold" -> "Criação dos moldes necessários para produção";
-            case "production" -> "Produção das peças e controlo de qualidade";
+            case "mold", "molde" -> "Criacao dos moldes necessarios para producao";
+            case "production", "producao" -> "Producao das pecas e controlo de qualidade";
             default -> "";
+        };
+    }
+
+    private Integer extractNumericId(String rawId) {
+        if (rawId == null) {
+            return null;
+        }
+        String cleaned = rawId.trim().toUpperCase(Locale.ROOT);
+        if (cleaned.matches("PRJ-\\d+")) {
+            return Integer.parseInt(cleaned.substring(4));
+        }
+        if (cleaned.matches("ENC-\\d+")) {
+            return Integer.parseInt(cleaned.substring(4));
+        }
+        if (cleaned.matches("\\d+")) {
+            return Integer.parseInt(cleaned);
+        }
+        return null;
+    }
+
+    private String normalizePhase(String tipo) {
+        if (tipo == null || tipo.isBlank()) {
+            return "design";
+        }
+        return switch (tipo.trim().toLowerCase(Locale.ROOT)) {
+            case "molde", "mold" -> "molde";
+            case "producao", "production" -> "producao";
+            default -> "design";
         };
     }
 

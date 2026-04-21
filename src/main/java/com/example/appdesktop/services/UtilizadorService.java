@@ -14,25 +14,42 @@ import java.util.concurrent.CompletableFuture;
 
 public class UtilizadorService {
 
-    private static final String BASE_URL_PROPERTY = "appdesktop.api.base-url";
-    private static final String BASE_URL_ENV = "APPDESKTOP_API_BASE_URL";
+    private static final String CLIENT_BASE_URL_PROPERTY = "appdesktop.api.base-url";
+    private static final String CLIENT_BASE_URL_ENV = "APPDESKTOP_API_BASE_URL";
+    private static final String ADMIN_BASE_URL_PROPERTY = "appdesktop.api.artesa-base-url";
+    private static final String ADMIN_BASE_URL_ENV = "APPDESKTOP_API_ARTESA_BASE_URL";
     private static final UtilizadorService INSTANCE = new UtilizadorService();
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
-    private final String loginUrl;
+    private final String clientLoginUrl;
+    private final String adminLoginUrl;
 
     private UtilizadorService() {
         this.httpClient = HttpClient.newHttpClient();
         this.objectMapper = new ObjectMapper();
-        this.loginUrl = resolveBaseUrl() + "/login";
+        this.clientLoginUrl = resolveClientBaseUrl() + "/login";
+        this.adminLoginUrl = resolveAdminBaseUrl() + "/login";
     }
 
     public static UtilizadorService getInstance() {
         return INSTANCE;
     }
 
+    public CompletableFuture<Utilizador> loginClient(String email, String password) {
+        return login(email, password, clientLoginUrl);
+    }
+
+    public CompletableFuture<Utilizador> loginAdmin(String email, String password) {
+        return login(email, password, adminLoginUrl);
+    }
+
+    // Backward compatibility: default login points to client endpoint.
     public CompletableFuture<Utilizador> login(String email, String password) {
+        return loginClient(email, password);
+    }
+
+    private CompletableFuture<Utilizador> login(String email, String password, String loginUrl) {
         ObjectNode payload = objectMapper.createObjectNode();
         payload.put("email", email);
         payload.put("password", password);
@@ -57,8 +74,15 @@ public class UtilizadorService {
                         Utilizador utilizador = new Utilizador();
                         JsonNode idNode = body.get("id");
                         utilizador.setId(idNode != null && !idNode.isNull() ? idNode.asInt() : null);
-                        utilizador.setNomeEmpresa(readText(body, "nomeEmpresa"));
+
+                        String nomeEmpresa = readText(body, "nomeEmpresa");
+                        if (nomeEmpresa == null || nomeEmpresa.isBlank()) {
+                            nomeEmpresa = readText(body, "nome");
+                        }
+                        utilizador.setNomeEmpresa(nomeEmpresa);
                         utilizador.setEmail(readText(body, "email"));
+                        utilizador.setPerfil(readText(body, "perfil"));
+
                         Utilizador.setCurrentUser(utilizador);
                         return CompletableFuture.completedFuture(utilizador);
                     }
@@ -76,7 +100,6 @@ public class UtilizadorService {
                     return CompletableFuture.failedFuture(new IllegalStateException("Nao foi possivel contactar a API de login em " + loginUrl + ".", cause));
                 });
     }
-
 
     public void logout() {
         Utilizador.clearCurrentUser();
@@ -112,13 +135,13 @@ public class UtilizadorService {
         return "Nao foi possivel autenticar com a API.";
     }
 
-    private String resolveBaseUrl() {
-        String fromProperty = System.getProperty(BASE_URL_PROPERTY);
+    private String resolveClientBaseUrl() {
+        String fromProperty = System.getProperty(CLIENT_BASE_URL_PROPERTY);
         if (fromProperty != null && !fromProperty.isBlank()) {
             return fromProperty.trim();
         }
 
-        String fromEnv = System.getenv(BASE_URL_ENV);
+        String fromEnv = System.getenv(CLIENT_BASE_URL_ENV);
         if (fromEnv != null && !fromEnv.isBlank()) {
             return fromEnv.trim();
         }
@@ -126,4 +149,17 @@ public class UtilizadorService {
         return "http://localhost:8080/api/utilizadores";
     }
 
+    private String resolveAdminBaseUrl() {
+        String fromProperty = System.getProperty(ADMIN_BASE_URL_PROPERTY);
+        if (fromProperty != null && !fromProperty.isBlank()) {
+            return fromProperty.trim();
+        }
+
+        String fromEnv = System.getenv(ADMIN_BASE_URL_ENV);
+        if (fromEnv != null && !fromEnv.isBlank()) {
+            return fromEnv.trim();
+        }
+
+        return "http://localhost:8080/api/artesas";
+    }
 }

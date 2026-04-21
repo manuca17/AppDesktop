@@ -11,6 +11,7 @@ public class ProjetoPersonalizado {
     private String briefing;
     private Instant dataCriacao;
     private String estadoAtual;
+    private Integer quantidade;
 
     public Integer getId() {
         return id;
@@ -66,5 +67,13 @@ public class ProjetoPersonalizado {
 
     public void setEstadoAtual(String estadoAtual) {
         this.estadoAtual = estadoAtual;
+    }
+
+    public Integer getQuantidade() {
+        return quantidade;
+    }
+
+    public void setQuantidade(Integer quantidade) {
+        this.quantidade = quantidade;
     }
 }

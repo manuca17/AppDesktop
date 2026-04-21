@@ -48,6 +48,9 @@
             <Button fx:id="ordersButton" mnemonicParsing="false" onAction="#onOrders"
                     style="-fx-alignment: center-left; -fx-background-color: transparent; -fx-padding: 10 12;"
                     text="Encomendas" maxWidth="Infinity"/>
+            <Button fx:id="meetingsButton" mnemonicParsing="false" onAction="#onMeetings"
+                    style="-fx-alignment: center-left; -fx-background-color: transparent; -fx-padding: 10 12;"
+                    text="Reunioes" maxWidth="Infinity"/>
         </VBox>
     </left>
 

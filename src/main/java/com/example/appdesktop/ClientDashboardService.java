@@ -61,6 +61,8 @@ public class ClientDashboardService {
             case "in_production" -> "Em Producao";
             case "quote_sent" -> "Orcamento Enviado";
             case "approved" -> "Aprovado";
+            case "pending" -> "Pendente";
+            case "shipped" -> "Enviado";
             case "delivered" -> "Entregue";
             case "paid" -> "Pago";
             case "completed" -> "Concluido";

@@ -205,6 +205,17 @@ public class ClientPortalDataService {
     public String projectStatusLabel(String status) {
         return switch (status) {
             case "briefing" -> "Em Analise";
+            case "orcamento_enviado" -> "Orcamento Enviado";
+            case "design" -> "Design";
+            case "molde" -> "Molde";
+            case "producao" -> "Producao";
+            case "enchimento_moldes" -> "Enchimento de Moldes";
+            case "secagem" -> "Secagem";
+            case "acabamento" -> "Acabamento";
+            case "cozedura" -> "Cozedura";
+            case "vidragem" -> "Vidragem";
+            case "inspecao_qualidade" -> "Inspecao de Qualidade";
+            case "completo" -> "Concluido";
             case "quote_sent" -> "Orcamento Enviado";
             case "approved" -> "Aprovado";
             case "in_production" -> "Em Producao";

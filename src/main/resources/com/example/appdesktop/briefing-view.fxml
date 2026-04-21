@@ -24,17 +24,11 @@
                 <Label text="Nome do Projeto"/>
                 <TextField fx:id="titleField" promptText="Ex: Colecao para restaurante"/>
 
-                <Label text="Setor"/>
-                <ComboBox fx:id="categoryCombo" promptText="Selecionar setor"/>
-
                 <Label text="Quantidade estimada"/>
                 <TextField fx:id="quantityField" promptText="Ex: 120"/>
 
                 <Label text="Descricao"/>
                 <TextArea fx:id="descriptionArea" prefRowCount="5" promptText="Descreva objetivo, estilo e uso das pecas"/>
-
-                <Label text="Referencias visuais e observacoes"/>
-                <TextArea fx:id="referencesArea" prefRowCount="4" promptText="Cores, acabamentos, links e notas"/>
 
                 <HBox spacing="10">
                     <Button mnemonicParsing="false" onAction="#onClearForm" style="-fx-background-color: transparent; -fx-border-color: #d1d5db;" text="Limpar"/>

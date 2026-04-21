@@ -1,7 +1,11 @@
 package com.example.appdesktop;
 
+import com.example.appdesktop.models.EncomendaCatalogo;
+import com.example.appdesktop.models.Orcamento;
 import com.example.appdesktop.models.ProjetoPersonalizado;
 import com.example.appdesktop.models.Utilizador;
+import com.example.appdesktop.services.EncomendaService;
+import com.example.appdesktop.services.OrcamentoService;
 import com.example.appdesktop.services.ProjetoPersonalizadoService;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -20,8 +24,12 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public class ClientDashboardController implements ClientPage {
 
@@ -45,6 +53,8 @@ public class ClientDashboardController implements ClientPage {
 
     private final ClientDashboardService dashboardService = new ClientDashboardService();
     private final ProjetoPersonalizadoService projetoPersonalizadoService = ProjetoPersonalizadoService.getInstance();
+    private final EncomendaService encomendaService = EncomendaService.getInstance();
+    private final OrcamentoService orcamentoService = OrcamentoService.getInstance();
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private final NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("pt", "PT"));
     private ClientPageNavigator navigator;
@@ -66,42 +76,141 @@ public class ClientDashboardController implements ClientPage {
     private void loadDashboard(String clientName) {
         Utilizador currentUser = Utilizador.getCurrentUser();
         if (currentUser == null || currentUser.getId() == null) {
-            applyDashboardState(clientName, List.of(), List.of());
+            applyDashboardState(clientName, List.of(), List.of(), List.of());
             return;
         }
 
-        List<ClientDashboardService.OrderItem> orders = List.of();
-        List<ClientDashboardService.OrderItem> recentOrders = List.of();
+        CompletableFuture<List<ProjetoPersonalizado>> projectsFuture = projetoPersonalizadoService
+                .findByUtilizadorId(currentUser.getId())
+                .exceptionally(error -> List.of());
 
-        projetoPersonalizadoService.findByUtilizadorId(currentUser.getId())
-                .whenComplete((apiProjects, error) -> Platform.runLater(() -> {
-                    if (error != null) {
-                        applyDashboardState(clientName, List.of(), List.of());
-                        return;
-                    }
+        CompletableFuture<List<EncomendaCatalogo>> ordersFuture = encomendaService
+                .findByUtilizadorId(currentUser.getId())
+                .exceptionally(error -> List.of());
 
-                    List<ClientDashboardService.ProjectItem> mappedProjects = mapApiProjects(apiProjects);
-                    applyDashboardState(clientName, mappedProjects, recentOrders);
+        CompletableFuture<List<Orcamento>> quotesFuture = projectsFuture
+                .thenCompose(this::loadQuotesForProjects)
+                .exceptionally(error -> List.of());
+
+        CompletableFuture.allOf(projectsFuture, ordersFuture, quotesFuture)
+                .whenComplete((done, error) -> Platform.runLater(() -> {
+                    List<ClientDashboardService.ProjectItem> mappedProjects = mapApiProjects(projectsFuture.join(), quotesFuture.join());
+                    List<ClientDashboardService.OrderItem> mappedOrders = mapApiOrders(ordersFuture.join());
+                    List<ClientDashboardService.OrderItem> recentOrders = dashboardService.recentOrders(mappedOrders, 4);
+                    applyDashboardState(clientName, mappedProjects, mappedOrders, recentOrders);
                 }));
+    }
+
+    private CompletableFuture<List<Orcamento>> loadQuotesForProjects(List<ProjetoPersonalizado> projects) {
+        if (projects == null || projects.isEmpty()) {
+            return CompletableFuture.completedFuture(List.of());
+        }
+
+        List<CompletableFuture<List<Orcamento>>> futures = new ArrayList<>();
+        for (ProjetoPersonalizado project : projects) {
+            if (project == null || project.getId() == null) {
+                continue;
+            }
+            futures.add(orcamentoService.findByProjetoId(project.getId())
+                    .exceptionally(error -> List.of()));
+        }
+
+        if (futures.isEmpty()) {
+            return CompletableFuture.completedFuture(List.of());
+        }
+
+        CompletableFuture<Void> allDone = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        return allDone.thenApply(done -> {
+            List<Orcamento> merged = new ArrayList<>();
+            for (CompletableFuture<List<Orcamento>> future : futures) {
+                List<Orcamento> list = future.join();
+                if (list != null && !list.isEmpty()) {
+                    merged.addAll(list);
+                }
+            }
+            return merged;
+        });
+    }
+
+    private List<ClientDashboardService.OrderItem> mapApiOrders(List<EncomendaCatalogo> orders) {
+        if (orders == null || orders.isEmpty()) {
+            return List.of();
+        }
+
+        List<ClientDashboardService.OrderItem> mapped = new ArrayList<>();
+        for (EncomendaCatalogo order : orders) {
+            if (order == null) {
+                continue;
+            }
+
+            String status = normalizeOrderStatus(order.getEstado());
+            if ("carrinho".equals(status)) {
+                continue;
+            }
+
+            int itemCount = 0;
+            if (order.getLinhas() != null) {
+                itemCount = order.getLinhas().stream()
+                        .mapToInt(line -> line.getQuantidade() == null ? 0 : line.getQuantidade())
+                        .sum();
+            }
+
+            mapped.add(new ClientDashboardService.OrderItem(
+                    order.getId() == null ? "ENC-?" : "ENC-" + order.getId(),
+                    status,
+                    order.getDataEncomenda() == null ? LocalDate.now() : order.getDataEncomenda(),
+                    order.total(),
+                    itemCount
+            ));
+        }
+
+        return mapped;
     }
 
     private void applyDashboardState(String clientName,
                                      List<ClientDashboardService.ProjectItem> projects,
-                                     List<ClientDashboardService.OrderItem> orders) {
-        BigDecimal totalInvestment = dashboardService.totalInvestment(orders, projects);
+                                     List<ClientDashboardService.OrderItem> allOrders,
+                                     List<ClientDashboardService.OrderItem> recentOrders) {
+        BigDecimal totalInvestment = dashboardService.totalInvestment(allOrders, projects);
 
         welcomeLabel.setText("Bem-vinda, " + clientName + "!");
         projectsCountLabel.setText(String.valueOf(projects.size()));
-        ordersCountLabel.setText(String.valueOf(orders.size()));
+        ordersCountLabel.setText(String.valueOf(allOrders.size()));
         investmentLabel.setText(currencyFormat.format(totalInvestment));
 
         renderProjects(projects);
-        renderOrders(orders);
+        renderOrders(recentOrders);
     }
 
-    private List<ClientDashboardService.ProjectItem> mapApiProjects(List<ProjetoPersonalizado> projects) {
+    private String normalizeOrderStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return "pending";
+        }
+        return switch (status.trim().toLowerCase(Locale.ROOT)) {
+            case "pendente", "pending" -> "pending";
+            case "pago", "paid" -> "paid";
+            case "enviado", "shipped" -> "shipped";
+            case "entregue", "delivered" -> "delivered";
+            case "carrinho", "cart" -> "carrinho";
+            default -> status.trim().toLowerCase(Locale.ROOT);
+        };
+    }
+
+    private List<ClientDashboardService.ProjectItem> mapApiProjects(List<ProjetoPersonalizado> projects, List<Orcamento> quotes) {
         if (projects == null || projects.isEmpty()) {
             return List.of();
+        }
+
+        Map<Integer, BigDecimal> totalByProjectId = new HashMap<>();
+        if (quotes != null) {
+            for (Orcamento quote : quotes) {
+                if (quote == null || quote.getIdProjeto() == null || quote.getIdProjeto().getId() == null) {
+                    continue;
+                }
+                Integer projectId = quote.getIdProjeto().getId();
+                BigDecimal value = quote.getValorTotalEstimado() == null ? BigDecimal.ZERO : quote.getValorTotalEstimado();
+                totalByProjectId.merge(projectId, value, BigDecimal::add);
+            }
         }
 
         return projects.stream()
@@ -117,7 +226,9 @@ public class ClientDashboardController implements ClientPage {
                         project.getDataCriacao() == null
                                 ? LocalDate.now()
                                 : project.getDataCriacao().atZone(ZoneId.systemDefault()).toLocalDate(),
-                        BigDecimal.ZERO
+                        project.getId() == null
+                                ? BigDecimal.ZERO
+                                : totalByProjectId.getOrDefault(project.getId(), BigDecimal.ZERO)
                 ))
                 .toList();
     }
@@ -206,7 +317,9 @@ public class ClientDashboardController implements ClientPage {
             case "briefing" -> "-fx-background-color: #fef3c7; -fx-text-fill: #92400e; -fx-padding: 4 8; -fx-background-radius: 999;";
             case "in_production" -> "-fx-background-color: #dbeafe; -fx-text-fill: #1e40af; -fx-padding: 4 8; -fx-background-radius: 999;";
             case "quote_sent" -> "-fx-background-color: #fef3c7; -fx-text-fill: #92400e; -fx-padding: 4 8; -fx-background-radius: 999;";
+            case "pending" -> "-fx-background-color: #fef3c7; -fx-text-fill: #92400e; -fx-padding: 4 8; -fx-background-radius: 999;";
             case "approved", "paid" -> "-fx-background-color: #dcfce7; -fx-text-fill: #166534; -fx-padding: 4 8; -fx-background-radius: 999;";
+            case "shipped" -> "-fx-background-color: #ede9fe; -fx-text-fill: #5b21b6; -fx-padding: 4 8; -fx-background-radius: 999;";
             case "delivered", "completed" -> "-fx-background-color: #e5e7eb; -fx-text-fill: #374151; -fx-padding: 4 8; -fx-background-radius: 999;";
             default -> "-fx-background-color: #e5e7eb; -fx-text-fill: #374151; -fx-padding: 4 8; -fx-background-radius: 999;";
         };

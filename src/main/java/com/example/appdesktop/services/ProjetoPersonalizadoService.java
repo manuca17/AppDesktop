@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class ProjetoPersonalizadoService {
@@ -40,11 +41,62 @@ public class ProjetoPersonalizadoService {
         return get(baseUrl);
     }
 
+    public CompletableFuture<ProjetoPersonalizado> create(ProjetoPersonalizado projeto) {
+        try {
+            String json = objectMapper.writeValueAsString(projeto);
+
+            HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(json))
+                    .build();
+
+            return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenCompose(response -> {
+                        if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                            try {
+                                JsonNode node = objectMapper.readTree(response.body());
+                                return CompletableFuture.completedFuture(mapProjeto(node));
+                            } catch (IOException e) {
+                                return CompletableFuture.failedFuture(e);
+                            }
+                        }
+                        return CompletableFuture.failedFuture(
+                                new IllegalStateException(defaultErrorMessage(response.statusCode())));
+                    })
+                    .exceptionallyCompose(ex -> {
+                        Throwable cause = ex.getCause() == null ? ex : ex.getCause();
+                        return CompletableFuture.failedFuture(new IllegalStateException(
+                                "Nao foi possivel criar o projeto personalizado.", cause));
+                    });
+        } catch (Exception e) {
+            return CompletableFuture.failedFuture(e);
+        }
+    }
+
     public CompletableFuture<List<ProjetoPersonalizado>> findByUtilizadorId(Integer utilizadorId) {
         if (utilizadorId == null) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("ID do utilizador e obrigatorio."));
         }
         return get(baseUrl + "/utilizador/" + utilizadorId);
+    }
+
+    public CompletableFuture<ProjetoPersonalizado> updateEstado(Integer projetoId, String estado) {
+        if (projetoId == null || estado == null || estado.isBlank()) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("ID e estado do projeto sao obrigatorios."));
+        }
+
+        Map<String, Object> payload = Map.of("estado", estado);
+        String url = baseUrl + "/" + projetoId + "/estado";
+
+        return sendEstadoUpdate("PATCH", url, payload)
+                .handle((result, error) -> {
+                    if (error == null) {
+                        return CompletableFuture.completedFuture(result);
+                    }
+                    return sendEstadoUpdate("PUT", url, payload);
+                })
+                .thenCompose(future -> future);
     }
 
     private CompletableFuture<List<ProjetoPersonalizado>> get(String url) {
@@ -68,6 +120,35 @@ public class ProjetoPersonalizadoService {
                     return CompletableFuture.failedFuture(new IllegalStateException(
                             "Nao foi possivel contactar a API de projetos personalizados em " + url + ".", cause));
                 });
+    }
+
+    private CompletableFuture<ProjetoPersonalizado> sendEstadoUpdate(String method, String url, Map<String, Object> payload) {
+        try {
+            String json = objectMapper.writeValueAsString(payload);
+            HttpRequest request = HttpRequest.newBuilder(URI.create(url))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .method(method, HttpRequest.BodyPublishers.ofString(json))
+                    .build();
+
+            return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenCompose(response -> {
+                        if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                            if (response.body() == null || response.body().isBlank()) {
+                                return CompletableFuture.completedFuture(null);
+                            }
+                            try {
+                                JsonNode node = objectMapper.readTree(response.body());
+                                return CompletableFuture.completedFuture(mapProjeto(node));
+                            } catch (IOException e) {
+                                return CompletableFuture.failedFuture(e);
+                            }
+                        }
+                        return CompletableFuture.failedFuture(new IllegalStateException(defaultErrorMessage(response.statusCode())));
+                    });
+        } catch (Exception ex) {
+            return CompletableFuture.failedFuture(ex);
+        }
     }
 
     private List<ProjetoPersonalizado> parseList(String rawBody) {
@@ -99,6 +180,7 @@ public class ProjetoPersonalizadoService {
         projeto.setEstadoAtual(readText(node, "estadoAtual"));
         projeto.setDataCriacao(readInstant(node, "dataCriacao"));
         projeto.setIdArtesa(readNestedId(node, "idArtesa"));
+        projeto.setQuantidade(readInteger(node, "quantidade"));
 
         JsonNode utilizadorNode = node.get("idUtilizador");
         if (utilizadorNode != null && !utilizadorNode.isNull()) {

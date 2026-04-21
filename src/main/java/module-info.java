@@ -9,5 +9,9 @@ module com.example.appdesktop {
     requires com.fasterxml.jackson.databind;
 
     opens com.example.appdesktop to javafx.fxml;
+    opens com.example.appdesktop.models to com.fasterxml.jackson.databind;
+    opens com.example.appdesktop.services to com.fasterxml.jackson.databind;
     exports com.example.appdesktop;
+    exports com.example.appdesktop.models;
+    exports com.example.appdesktop.services;
 }

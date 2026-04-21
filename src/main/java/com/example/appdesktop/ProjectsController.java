@@ -1,7 +1,10 @@
 package com.example.appdesktop;
 
+import com.example.appdesktop.models.Orcamento;
 import com.example.appdesktop.models.ProjetoPersonalizado;
 import com.example.appdesktop.models.Utilizador;
+import com.example.appdesktop.services.MensagemChatService;
+import com.example.appdesktop.services.OrcamentoService;
 import com.example.appdesktop.services.ProjetoPersonalizadoService;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -18,8 +21,12 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
+import java.util.concurrent.CompletableFuture;
 
 public class ProjectsController implements ClientPage {
 
@@ -31,6 +38,8 @@ public class ProjectsController implements ClientPage {
 
     private final ClientPortalDataService dataService = new ClientPortalDataService();
     private final ProjetoPersonalizadoService projetoPersonalizadoService = ProjetoPersonalizadoService.getInstance();
+    private final MensagemChatService mensagemChatService = MensagemChatService.getInstance();
+    private final OrcamentoService orcamentoService = OrcamentoService.getInstance();
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private final NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("pt", "PT"));
 
@@ -61,16 +70,95 @@ public class ProjectsController implements ClientPage {
         }
 
         projetoPersonalizadoService.findByUtilizadorId(currentUser.getId())
-                .whenComplete((projects, error) -> Platform.runLater(() -> {
-                    if (error != null) {
+                .thenCompose(projects -> {
+                    CompletableFuture<Map<Integer, BigDecimal>> quoteTotalsFuture = loadQuoteTotals(projects)
+                            .exceptionally(error -> Map.of());
+                    CompletableFuture<Map<Integer, Integer>> messageTotalsFuture = loadMessageTotals(projects)
+                            .exceptionally(error -> Map.of());
+                    return quoteTotalsFuture.thenCombine(messageTotalsFuture,
+                            (quoteTotals, messageTotals) -> new Object[]{projects, quoteTotals, messageTotals});
+                })
+                .whenComplete((result, error) -> Platform.runLater(() -> {
+                    if (error != null || result == null) {
                         renderProjects(List.of());
                         return;
                     }
-                    renderProjects(mapProjects(projects));
+                    List<ProjetoPersonalizado> projects = (List<ProjetoPersonalizado>) result[0];
+                    Map<Integer, BigDecimal> quoteTotals = (Map<Integer, BigDecimal>) result[1];
+                    Map<Integer, Integer> messageTotals = (Map<Integer, Integer>) result[2];
+                    renderProjects(mapProjects(projects, quoteTotals, messageTotals));
                 }));
     }
 
-    private List<ProjectCardData> mapProjects(List<ProjetoPersonalizado> projects) {
+    private CompletableFuture<Map<Integer, BigDecimal>> loadQuoteTotals(List<ProjetoPersonalizado> projects) {
+        if (projects == null || projects.isEmpty()) {
+            return CompletableFuture.completedFuture(Map.of());
+        }
+
+        Map<Integer, BigDecimal> totals = new HashMap<>();
+        List<CompletableFuture<Void>> requests = new ArrayList<>();
+        for (ProjetoPersonalizado project : projects) {
+            if (project == null || project.getId() == null) {
+                continue;
+            }
+            CompletableFuture<Void> request = orcamentoService.findByProjetoId(project.getId())
+                    .thenAccept(quotes -> totals.put(project.getId(), sumQuotes(quotes)))
+                    .exceptionally(error -> {
+                        totals.put(project.getId(), BigDecimal.ZERO);
+                        return null;
+                    });
+            requests.add(request);
+        }
+
+        if (requests.isEmpty()) {
+            return CompletableFuture.completedFuture(Map.of());
+        }
+
+        return CompletableFuture.allOf(requests.toArray(new CompletableFuture[0]))
+                .thenApply(done -> totals);
+    }
+
+    private BigDecimal sumQuotes(List<Orcamento> quotes) {
+        if (quotes == null || quotes.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return quotes.stream()
+                .filter(q -> q != null && q.getValorTotalEstimado() != null)
+                .map(Orcamento::getValorTotalEstimado)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private CompletableFuture<Map<Integer, Integer>> loadMessageTotals(List<ProjetoPersonalizado> projects) {
+        if (projects == null || projects.isEmpty()) {
+            return CompletableFuture.completedFuture(Map.of());
+        }
+
+        Map<Integer, Integer> totals = new HashMap<>();
+        List<CompletableFuture<Void>> requests = new ArrayList<>();
+        for (ProjetoPersonalizado project : projects) {
+            if (project == null || project.getId() == null) {
+                continue;
+            }
+            CompletableFuture<Void> request = mensagemChatService.findTotalByProjetoId(project.getId())
+                    .thenAccept(total -> totals.put(project.getId(), total == null ? 0 : total))
+                    .exceptionally(error -> {
+                        totals.put(project.getId(), 0);
+                        return null;
+                    });
+            requests.add(request);
+        }
+
+        if (requests.isEmpty()) {
+            return CompletableFuture.completedFuture(Map.of());
+        }
+
+        return CompletableFuture.allOf(requests.toArray(new CompletableFuture[0]))
+                .thenApply(done -> totals);
+    }
+
+    private List<ProjectCardData> mapProjects(List<ProjetoPersonalizado> projects,
+                                              Map<Integer, BigDecimal> quoteTotals,
+                                              Map<Integer, Integer> messageTotals) {
         if (projects == null || projects.isEmpty()) {
             return List.of();
         }
@@ -87,7 +175,10 @@ public class ProjectsController implements ClientPage {
                                 : project.getBriefing(),
                         project.getDataCriacao() == null
                                 ? LocalDate.now()
-                                : project.getDataCriacao().atZone(ZoneId.systemDefault()).toLocalDate()
+                                : project.getDataCriacao().atZone(ZoneId.systemDefault()).toLocalDate(),
+                        project.getQuantidade(),
+                        project.getId() == null ? BigDecimal.ZERO : quoteTotals.getOrDefault(project.getId(), BigDecimal.ZERO),
+                        project.getId() == null ? 0 : messageTotals.getOrDefault(project.getId(), 0)
                 ))
                 .toList();
     }
@@ -124,9 +215,9 @@ public class ProjectsController implements ClientPage {
         description.setStyle("-fx-text-fill: #4b5563;");
 
         HBox stats = new HBox(16,
-                stat("Quantidade", "--"),
-                stat("Valor", currencyFormat.format(BigDecimal.ZERO)),
-                stat("Mensagens", "--")
+                stat("Quantidade", project.quantidade() != null ? project.quantidade() + " pecas" : "--"),
+                stat("Valor", currencyFormat.format(project.quoteTotal() == null ? BigDecimal.ZERO : project.quoteTotal())),
+                stat("Mensagens", String.valueOf(project.messageCount()))
         );
 
         Label timeline = new Label("Criado em " + dateFormatter.format(project.createdAt())
@@ -153,28 +244,38 @@ public class ProjectsController implements ClientPage {
     }
 
     private double completion(String status) {
-        return switch (status) {
-            case "briefing" -> 0.1;
-            case "quote_sent" -> 0.3;
-            case "approved" -> 0.5;
-            case "in_production" -> 0.75;
-            case "completed" -> 1.0;
-            default -> 0.0;
+        String normalized = normalizeStatus(status);
+        return switch (normalized) {
+            case "briefing" -> 0.08;
+            case "orcamento_enviado" -> 0.16;
+            case "design" -> 0.24;
+            case "molde" -> 0.32;
+            case "producao" -> 0.40;
+            case "enchimento_moldes" -> 0.50;
+            case "secagem" -> 0.60;
+            case "acabamento" -> 0.70;
+            case "cozedura" -> 0.80;
+            case "vidragem" -> 0.90;
+            case "inspecao_qualidade" -> 0.96;
+            case "completo" -> 1.0;
+            default -> 0.08;
         };
     }
 
     private String stageLabel(String stage) {
         return switch (stage) {
             case "briefing" -> "Briefing";
-            case "quote_sent" -> "Orcamento";
-            case "approved" -> "Aprovado";
-            case "in_production" -> "Em Producao";
-            case "completed" -> "Concluido";
-            case "molding" -> "Moldagem";
-            case "drying" -> "Secagem";
-            case "first_firing" -> "Primeira Cozedura";
-            case "glazing" -> "Vidragem";
-            case "second_firing" -> "Segunda Cozedura";
+            case "orcamento_enviado" -> "Orcamento Enviado";
+            case "design" -> "Design";
+            case "molde" -> "Molde";
+            case "producao" -> "Producao";
+            case "enchimento_moldes" -> "Enchimento de Moldes";
+            case "secagem" -> "Secagem";
+            case "acabamento" -> "Acabamento";
+            case "cozedura" -> "Cozedura";
+            case "vidragem" -> "Vidragem";
+            case "inspecao_qualidade" -> "Inspecao de Qualidade";
+            case "completo" -> "Concluido";
             default -> "Acabamento";
         };
     }
@@ -185,10 +286,17 @@ public class ProjectsController implements ClientPage {
         }
         return switch (status.trim().toLowerCase(Locale.ROOT)) {
             case "em_analise", "analise", "briefing" -> "briefing";
-            case "orcamento_enviado", "quote_sent" -> "quote_sent";
-            case "aprovado", "approved" -> "approved";
-            case "em_producao", "in_production" -> "in_production";
-            case "concluido", "completed" -> "completed";
+            case "orcamento_enviado", "orçamento enviado", "quote_sent" -> "orcamento_enviado";
+            case "design" -> "design";
+            case "molde", "mold" -> "molde";
+            case "producao", "produção", "production" -> "producao";
+            case "enchimento de moldes", "enchimento_moldes" -> "enchimento_moldes";
+            case "secagem" -> "secagem";
+            case "acabamento" -> "acabamento";
+            case "cozedura" -> "cozedura";
+            case "vidragem" -> "vidragem";
+            case "inspecao de qualidade", "inspecao_qualidade", "inspeção de qualidade" -> "inspecao_qualidade";
+            case "concluido", "concluído", "completed", "completo" -> "completo";
             default -> status.trim().toLowerCase(Locale.ROOT);
         };
     }
@@ -215,7 +323,10 @@ public class ProjectsController implements ClientPage {
             String title,
             String status,
             String description,
-            LocalDate createdAt
+            LocalDate createdAt,
+            Integer quantidade,
+            BigDecimal quoteTotal,
+            int messageCount
     ) {
     }
 }

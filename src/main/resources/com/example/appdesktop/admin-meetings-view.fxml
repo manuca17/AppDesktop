@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane fitToWidth="true" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.example.appdesktop.AdminMeetingsController"
+            style="-fx-background: transparent; -fx-background-color: transparent;">
+    <content>
+        <VBox spacing="16" style="-fx-padding: 4;">
+            <HBox>
+                <VBox spacing="4">
+                    <Label style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="Gestao de Reunioes"/>
+                    <Label style="-fx-text-fill: #4b5563;" text="Acompanhe reunioes criadas"/>
+                </VBox>
+                <Region HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <GridPane hgap="12" vgap="12">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="25"/>
+                    <ColumnConstraints percentWidth="25"/>
+                    <ColumnConstraints percentWidth="25"/>
+                    <ColumnConstraints percentWidth="25"/>
+                </columnConstraints>
+
+                <VBox GridPane.columnIndex="0" spacing="6" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 14; -fx-border-color: #e5e7eb; -fx-border-radius: 10;">
+                    <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #6b7280;" text="TOTAL"/>
+                    <Label fx:id="totalMeetingsLabel" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="0"/>
+                </VBox>
+
+                <VBox GridPane.columnIndex="1" spacing="6" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 14; -fx-border-color: #e5e7eb; -fx-border-radius: 10;">
+                    <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #6b7280;" text="AGENDADAS"/>
+                    <Label fx:id="scheduledMeetingsLabel" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #92400e;" text="0"/>
+                </VBox>
+
+                <VBox GridPane.columnIndex="2" spacing="6" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 14; -fx-border-color: #e5e7eb; -fx-border-radius: 10;">
+                    <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #6b7280;" text="CONFIRMADAS"/>
+                    <Label fx:id="confirmedMeetingsLabel" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #166534;" text="0"/>
+                </VBox>
+
+                <VBox GridPane.columnIndex="3" spacing="6" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 14; -fx-border-color: #e5e7eb; -fx-border-radius: 10;">
+                    <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #6b7280;" text="CANCELADAS"/>
+                    <Label fx:id="cancelledMeetingsLabel" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #991b1b;" text="0"/>
+                </VBox>
+            </GridPane>
+
+            <VBox spacing="10" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 16; -fx-border-color: #e5e7eb; -fx-border-radius: 10;">
+                <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Proximas Reunioes"/>
+                <VBox fx:id="upcomingMeetingsContainer" spacing="8"/>
+                <Label fx:id="emptyUpcomingLabel" managed="false" visible="false" style="-fx-text-fill: #6b7280;" text="Nenhuma reuniao agendada"/>
+            </VBox>
+
+            <VBox spacing="10" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 16; -fx-border-color: #e5e7eb; -fx-border-radius: 10;">
+                <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Reunioes Anteriores"/>
+                <VBox fx:id="pastMeetingsContainer" spacing="8"/>
+                <Label fx:id="emptyPastLabel" managed="false" visible="false" style="-fx-text-fill: #6b7280;" text="Sem reunioes anteriores"/>
+            </VBox>
+        </VBox>
+    </content>
+</ScrollPane>

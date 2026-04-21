@@ -4,6 +4,8 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
@@ -20,8 +22,39 @@
             <HBox spacing="10">
                 <TextField fx:id="searchField" onKeyReleased="#onSearchChanged"
                            promptText="Procurar por numero ou cliente..." HBox.hgrow="ALWAYS"/>
-                <ComboBox fx:id="statusCombo" onAction="#onStatusChanged" prefWidth="200"/>
+                <ComboBox fx:id="statusCombo" onAction="#onStatusChanged" prefWidth="200" promptText="Estado"/>
             </HBox>
+
+            <GridPane hgap="10" vgap="10">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="20"/>
+                    <ColumnConstraints percentWidth="20"/>
+                    <ColumnConstraints percentWidth="20"/>
+                    <ColumnConstraints percentWidth="20"/>
+                    <ColumnConstraints percentWidth="20"/>
+                </columnConstraints>
+
+                <VBox GridPane.columnIndex="0" spacing="4" style="-fx-background-color: white; -fx-padding: 10; -fx-background-radius: 8; -fx-border-color: #e5e7eb; -fx-border-radius: 8;">
+                    <Label style="-fx-font-size: 11px; -fx-text-fill: #6b7280;" text="Total"/>
+                    <Label fx:id="totalOrdersLabel" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="0"/>
+                </VBox>
+                <VBox GridPane.columnIndex="1" spacing="4" style="-fx-background-color: white; -fx-padding: 10; -fx-background-radius: 8; -fx-border-color: #e5e7eb; -fx-border-radius: 8;">
+                    <Label style="-fx-font-size: 11px; -fx-text-fill: #6b7280;" text="Pendentes"/>
+                    <Label fx:id="pendingOrdersLabel" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #92400e;" text="0"/>
+                </VBox>
+                <VBox GridPane.columnIndex="2" spacing="4" style="-fx-background-color: white; -fx-padding: 10; -fx-background-radius: 8; -fx-border-color: #e5e7eb; -fx-border-radius: 8;">
+                    <Label style="-fx-font-size: 11px; -fx-text-fill: #6b7280;" text="Pagas"/>
+                    <Label fx:id="paidOrdersLabel" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #166534;" text="0"/>
+                </VBox>
+                <VBox GridPane.columnIndex="3" spacing="4" style="-fx-background-color: white; -fx-padding: 10; -fx-background-radius: 8; -fx-border-color: #e5e7eb; -fx-border-radius: 8;">
+                    <Label style="-fx-font-size: 11px; -fx-text-fill: #6b7280;" text="Enviadas"/>
+                    <Label fx:id="shippedOrdersLabel" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #5b21b6;" text="0"/>
+                </VBox>
+                <VBox GridPane.columnIndex="4" spacing="4" style="-fx-background-color: white; -fx-padding: 10; -fx-background-radius: 8; -fx-border-color: #e5e7eb; -fx-border-radius: 8;">
+                    <Label style="-fx-font-size: 11px; -fx-text-fill: #6b7280;" text="Entregues"/>
+                    <Label fx:id="deliveredOrdersLabel" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="0"/>
+                </VBox>
+            </GridPane>
 
             <VBox fx:id="ordersContainer" spacing="12"/>
             <Label fx:id="emptyLabel" managed="false" style="-fx-text-fill: #6b7280;" text="Nenhuma encomenda encontrada" visible="false"/>
