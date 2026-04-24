@@ -5,12 +5,14 @@ import com.example.appdesktop.models.Orcamento;
 import com.example.appdesktop.models.ProjetoPersonalizado;
 import com.example.appdesktop.models.Reuniao;
 import com.example.appdesktop.models.Utilizador;
+import com.example.appdesktop.models.ArtigoCatalogo;
 import com.example.appdesktop.services.MensagemChatService;
 import com.example.appdesktop.services.OrcamentoService;
 import com.example.appdesktop.services.ProjetoPersonalizadoService;
 import com.example.appdesktop.services.ReuniaoService;
 import com.example.appdesktop.services.EncomendaService;
 import com.example.appdesktop.services.ItemEncomendaService;
+import com.example.appdesktop.services.ArtigoCatalogoService;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -22,6 +24,7 @@ import javafx.scene.layout.VBox;
 
 import java.text.NumberFormat;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -111,6 +114,7 @@ public class ProjectDetailController implements ClientPage {
     private final MensagemChatService mensagemChatService = MensagemChatService.getInstance();
     private final EncomendaService encomendaService = EncomendaService.getInstance();
     private final ItemEncomendaService itemEncomendaService = ItemEncomendaService.getInstance();
+    private final ArtigoCatalogoService artigoService = ArtigoCatalogoService.getInstance();
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
     private final NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("pt", "PT"));
@@ -122,6 +126,7 @@ public class ProjectDetailController implements ClientPage {
     private List<MensagemChat> projectMessages = new ArrayList<>();
     private Integer projectQuantity;
     private BigDecimal projectQuoteTotal = BigDecimal.ZERO;
+    private String projectTitle;
 
     @FXML
     private void initialize() {
@@ -241,6 +246,7 @@ public class ProjectDetailController implements ClientPage {
         String status = project.getEstadoAtual();
         String normalizedStatus = normalizeStatus(status);
         projectTitleLabel.setText(nonBlank(project.getTituloProjeto(), "Projeto personalizado"));
+        projectTitle = nonBlank(project.getTituloProjeto(), "Projeto " + (project.getId() == null ? "" : project.getId()));
         projectIdLabel.setText(project.getId() == null ? "PRJ-?" : "PRJ-" + project.getId());
         projectStatusBadge.setText(dataService.projectStatusLabel(normalizedStatus));
         projectStatusBadge.setStyle(statusStyle(normalizedStatus));
@@ -976,47 +982,78 @@ public class ProjectDetailController implements ClientPage {
             }
         }
 
-        if (quantidade != null && projectQuantity != null && projectQuantity > 0 && projectQuoteTotal != null
-                && projectQuoteTotal.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal unitPrice = projectQuoteTotal.divide(BigDecimal.valueOf(projectQuantity), 2, java.math.RoundingMode.HALF_UP);
-            BigDecimal estimate = unitPrice.multiply(BigDecimal.valueOf(quantidade));
+        int reorderQuantidade = quantidade != null ? quantidade : (projectQuantity == null || projectQuantity <= 0 ? 1 : projectQuantity);
+        if (reorderQuantidade <= 0) {
+            showInfo("Reencomenda", "Quantidade invalida.");
+            return;
+        }
+        BigDecimal unitPrice = resolveProductionUnitPrice();
+        if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal estimate = unitPrice.multiply(BigDecimal.valueOf(reorderQuantidade));
             Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
             confirm.setTitle("Reencomenda");
-            confirm.setHeaderText("Estimativa para " + quantidade + " pecas");
+            confirm.setHeaderText("Estimativa para " + reorderQuantidade + " pecas");
             confirm.setContentText("Estimativa total: " + currencyFormat.format(estimate));
             if (confirm.showAndWait().filter(ButtonType.OK::equals).isEmpty()) {
                 return;
             }
         }
+        Utilizador currentUser = Utilizador.getCurrentUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            showInfo("Reencomenda", "Reencomenda criada, mas sem sessao ativa.");
+            return;
+        }
 
-        encomendaService.reencomendarProjeto(projectNumericId, quantidade)
-                .whenComplete((encomenda, error) -> Platform.runLater(() -> {
-                    if (error != null) {
-                        showInfo("Reencomenda", "Nao foi possivel reencomendar. " + formatError(error, ""));
+        String artigoNome = projectTitle == null || projectTitle.isBlank()
+                ? "Projeto " + projectNumericId
+                : projectTitle;
+
+        artigoService.findAll()
+                .whenComplete((artigos, error) -> Platform.runLater(() -> {
+                    if (error != null || artigos == null) {
+                        showInfo("Reencomenda", "Nao foi possivel localizar o artigo do projeto.");
                         return;
                     }
 
-                    Utilizador currentUser = Utilizador.getCurrentUser();
-                    if (currentUser == null || currentUser.getId() == null) {
-                        showInfo("Reencomenda", "Reencomenda criada, mas sem sessao ativa.");
+                    ArtigoCatalogo artigo = artigos.stream()
+                            .filter(a -> a != null && a.getNome() != null && a.getNome().equalsIgnoreCase(artigoNome))
+                            .findFirst()
+                            .orElse(null);
+
+                    if (artigo == null || artigo.getId() == null) {
+                        showInfo("Reencomenda", "Artigo do projeto nao encontrado. Confirme se o projeto esta completo.");
                         return;
                     }
 
-                    encomendaService.checkout(currentUser.getId(), projectNumericId)
-                            .whenComplete((checkout, checkoutError) -> Platform.runLater(() -> {
-                                if (checkoutError != null) {
-                                    showInfo("Reencomenda", "Carrinho criado. Finalize o pagamento no checkout.");
-                                    if (navigator != null) {
-                                        navigator.navigateTo("checkout");
-                                    }
+                    Integer stock = artigo.getStock();
+                    if (stock != null && reorderQuantidade > stock) {
+                        showInfo("Reencomenda", "Stock insuficiente para o artigo. Disponivel: " + stock + ".");
+                        return;
+                    }
+
+                    encomendaService.addItemAoCarrinho(currentUser.getId(), artigo.getId(), reorderQuantidade)
+                            .whenComplete((carrinho, cartError) -> Platform.runLater(() -> {
+                                if (cartError != null) {
+                                    showInfo("Reencomenda", "Nao foi possivel adicionar o artigo ao carrinho. " + formatError(cartError, ""));
                                     return;
                                 }
-                                showInfo("Reencomenda", "Pagamento e encomenda finalizados com sucesso.");
+                                showInfo("Reencomenda", "Artigo adicionado ao carrinho. Prossiga para o checkout.");
                                 if (navigator != null) {
-                                    navigator.navigateTo("orders");
+                                    navigator.navigateTo("checkout");
                                 }
                             }));
                 }));
+    }
+
+    private BigDecimal resolveProductionUnitPrice() {
+        if (projectQuantity == null || projectQuantity <= 0) {
+            return null;
+        }
+        BigDecimal productionTotal = totalByType("producao");
+        if (productionTotal == null || productionTotal.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        return productionTotal.divide(BigDecimal.valueOf(projectQuantity), 2, RoundingMode.HALF_UP);
     }
 
     private String formatError(Throwable error, String fallback) {

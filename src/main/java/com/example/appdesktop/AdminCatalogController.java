@@ -332,7 +332,11 @@ public class AdminCatalogController implements AdminPage {
         Button remove = new Button("Remover");
         remove.setStyle("-fx-background-color: transparent; -fx-border-color: #d1d5db;");
         remove.setOnAction(e -> {
-            fichaTecnicaService.deleteForArtigo(artigoId)
+            if (ficha == null || ficha.getId() == null) {
+                showInfo("Ficha sem ID para remover.");
+                return;
+            }
+            fichaTecnicaService.deleteForArtigo(artigoId, ficha.getId())
                     .whenComplete((done, error) -> Platform.runLater(() -> {
                         if (error != null) {
                             showInfo("Nao foi possivel remover a ficha tecnica. " + formatError(error, "Nao foi possivel remover a ficha tecnica."));
@@ -392,7 +396,7 @@ public class AdminCatalogController implements AdminPage {
 
         CompletableFuture<?> request = ficha == null
                 ? fichaTecnicaService.createForArtigo(artigoId, payload)
-                : fichaTecnicaService.updateForArtigo(artigoId, payload);
+                : fichaTecnicaService.update(ficha.getId(), payload);
 
         request.whenComplete((saved, error) -> Platform.runLater(() -> {
             if (error != null) {

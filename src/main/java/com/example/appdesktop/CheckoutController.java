@@ -94,7 +94,15 @@ public class CheckoutController implements ClientPage {
                     confirmButton.setText("Confirmar Encomenda");
 
                     if (error != null) {
-                        showError("Checkout", "Nao foi possivel confirmar a encomenda.");
+                        showError("Checkout", "Nao foi possivel confirmar a encomenda. " + formatError(error));
+                        return;
+                    }
+
+                    if (!isPaid(encomenda)) {
+                        showError("Pagamento", "Encomenda criada, mas pagamento nao confirmado.");
+                        if (navigator != null) {
+                            navigator.navigateTo("orders");
+                        }
                         return;
                     }
 
@@ -221,6 +229,23 @@ public class CheckoutController implements ClientPage {
         return true;
     }
 
+    private boolean isPaid(EncomendaCatalogo encomenda) {
+        if (encomenda == null) {
+            return false;
+        }
+        String paymentStatus = encomenda.getEstadoPagamento();
+        if (paymentStatus != null && !paymentStatus.isBlank()) {
+            String normalized = paymentStatus.trim().toLowerCase(Locale.ROOT);
+            return "pago".equals(normalized) || "paid".equals(normalized);
+        }
+        String estado = encomenda.getEstado();
+        if (estado != null && !estado.isBlank()) {
+            String normalized = estado.trim().toLowerCase(Locale.ROOT);
+            return "pago".equals(normalized) || "paid".equals(normalized);
+        }
+        return false;
+    }
+
     private void showSuccess(String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Sucesso");
@@ -235,5 +260,17 @@ public class CheckoutController implements ClientPage {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    private String formatError(Throwable error) {
+        if (error == null) {
+            return "";
+        }
+        Throwable cause = error.getCause() == null ? error : error.getCause();
+        String message = cause.getMessage();
+        if (message == null || message.isBlank()) {
+            return "";
+        }
+        return message;
     }
 }

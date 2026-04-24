@@ -226,10 +226,20 @@ public class EncomendaService {
 
             return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                     .thenCompose(response -> {
+                        if (url != null && url.endsWith("/checkout")) {
+                            System.out.println("[checkout] status=" + response.statusCode());
+                            System.out.println("[checkout] body=" + response.body());
+                        }
                         if (response.statusCode() >= 200 && response.statusCode() < 300) {
                             JsonNode node = parseNode(response.body());
                             if (node == null || node.isNull()) {
                                 return CompletableFuture.completedFuture(null);
+                            }
+                            if (node.isArray()) {
+                                if (node.isEmpty()) {
+                                    return CompletableFuture.completedFuture(null);
+                                }
+                                return CompletableFuture.completedFuture(mapEncomenda(node.get(0)));
                             }
                             return CompletableFuture.completedFuture(mapEncomenda(node));
                         }
@@ -368,9 +378,9 @@ public class EncomendaService {
         enc.setId(readInteger(node, "id", "idEncomenda", "id_encomenda"));
         enc.setEstado(readText(node, "estado", "status"));
 
-        String estadoPagamento = readText(node, "estadoPagamento", "estado_pagamento", "paymentStatus");
+        String estadoPagamento = readText(node, "estadoPagamento", "estado_pagamento", "paymentStatus", "payment_status", "statusPagamento");
         enc.setEstadoPagamento(estadoPagamento);
-        enc.setDataEncomenda(readLocalDate(node, "dataEncomenda", "data_encomenda", "dataCriacao", "createdAt"));
+        enc.setDataEncomenda(readLocalDate(node, "dataEncomenda", "data_encomenda", "dataCriacao", "createdAt", "dataPedido"));
 
         JsonNode utilizadorNode = node.get("idUtilizador");
         if (utilizadorNode != null && !utilizadorNode.isNull()) {
@@ -407,7 +417,7 @@ public class EncomendaService {
             enc.setLinhas(linhas);
         }
 
-        BigDecimal total = readBigDecimal(node, "total", "valorTotal");
+        BigDecimal total = readBigDecimal(node, "total", "valorTotal", "valorFinal", "valor_final");
         enc.setTotal(total);
 
         return enc;

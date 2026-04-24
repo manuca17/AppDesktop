@@ -5,11 +5,13 @@ import com.example.appdesktop.models.MensagemChat;
 import com.example.appdesktop.models.Orcamento;
 import com.example.appdesktop.models.Utilizador;
 import com.example.appdesktop.models.FichaTecnica;
+import com.example.appdesktop.models.ArtigoCatalogo;
 import com.example.appdesktop.services.MensagemChatService;
 import com.example.appdesktop.services.OrcamentoService;
 import com.example.appdesktop.services.ProjetoPersonalizadoService;
 import com.example.appdesktop.services.ReuniaoService;
 import com.example.appdesktop.services.FichaTecnicaService;
+import com.example.appdesktop.services.ArtigoCatalogoService;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -32,6 +34,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -59,6 +62,7 @@ public class AdminProjectsController implements AdminPage {
     private final OrcamentoService orcamentoService = OrcamentoService.getInstance();
     private final ReuniaoService reuniaoService = ReuniaoService.getInstance();
     private final FichaTecnicaService fichaTecnicaService = FichaTecnicaService.getInstance();
+    private final ArtigoCatalogoService artigoService = ArtigoCatalogoService.getInstance();
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private List<ProjetoPersonalizado> allProjects = new ArrayList<>();
@@ -268,8 +272,119 @@ public class AdminProjectsController implements AdminPage {
                         }
                         loadProjects();
                         showInfo("Estado atualizado para: " + dataService.projectStatusLabel(newStatus));
+                        if ("completo".equals(normalizeStatus(newStatus))) {
+                            ensureArtigoForProject(project);
+                        }
                     }));
         }
+    }
+
+    private void ensureArtigoForProject(ProjetoPersonalizado project) {
+        if (project == null || project.getId() == null) {
+            return;
+        }
+
+        Integer quantidade = project.getQuantidade();
+        if (quantidade == null || quantidade <= 0) {
+            showInfo("Nao foi possivel criar artigo: quantidade invalida.");
+            return;
+        }
+
+        String artigoNome = resolveArticleName(project);
+
+        orcamentoService.findByProjetoId(project.getId())
+                .thenCompose(orcamentos -> {
+                    BigDecimal producaoTotal = resolveProductionQuoteTotal(orcamentos);
+                    if (producaoTotal == null || producaoTotal.compareTo(BigDecimal.ZERO) <= 0) {
+                        return CompletableFuture.failedFuture(new IllegalStateException("Sem orcamento de producao."));
+                    }
+
+                    BigDecimal unitPrice = producaoTotal.divide(BigDecimal.valueOf(quantidade), 2, RoundingMode.HALF_UP);
+                    return artigoService.findAll()
+                            .thenCompose(artigos -> {
+                                ArtigoCatalogo existing = artigos == null ? null : artigos.stream()
+                                        .filter(a -> a != null && a.getNome() != null
+                                                && a.getNome().equalsIgnoreCase(artigoNome))
+                                        .findFirst()
+                                        .orElse(null);
+                                if (existing != null) {
+                                    return CompletableFuture.completedFuture(existing);
+                                }
+
+                                ArtigoCatalogo artigo = new ArtigoCatalogo();
+                                artigo.setNome(artigoNome);
+                                artigo.setPrecoUnitario(unitPrice);
+                                artigo.setStock(quantidade);
+                                artigo.setVisivel(true);
+                                return artigoService.create(artigo);
+                            });
+                })
+                .thenCompose(artigo -> associateFichasToArtigo(project.getId(), artigo))
+                .whenComplete((artigo, error) -> Platform.runLater(() -> {
+                    if (error != null) {
+                        showInfo("Nao foi possivel criar/associar o artigo do projeto. " + formatError(error));
+                        return;
+                    }
+                    showInfo("Artigo e fichas tecnicas associados ao projeto concluido.");
+                }));
+    }
+
+    private CompletableFuture<ArtigoCatalogo> associateFichasToArtigo(Integer projetoId, ArtigoCatalogo artigo) {
+        if (projetoId == null || artigo == null || artigo.getId() == null) {
+            return CompletableFuture.completedFuture(artigo);
+        }
+
+        return fichaTecnicaService.findByProjetoId(projetoId)
+                .thenCompose(fichas -> {
+                    if (fichas == null || fichas.isEmpty()) {
+                        return CompletableFuture.completedFuture(artigo);
+                    }
+
+                    List<CompletableFuture<?>> tasks = new ArrayList<>();
+                    for (FichaTecnica ficha : fichas) {
+                        if (ficha == null || ficha.getId() == null) {
+                            continue;
+                        }
+                        tasks.add(fichaTecnicaService.updateForArtigo(artigo.getId(), ficha.getId()));
+                    }
+                    if (tasks.isEmpty()) {
+                        return CompletableFuture.completedFuture(artigo);
+                    }
+                    return CompletableFuture.allOf(tasks.toArray(CompletableFuture[]::new))
+                            .thenApply(ignore -> artigo);
+                });
+    }
+
+    private BigDecimal resolveProductionQuoteTotal(List<Orcamento> orcamentos) {
+        if (orcamentos == null || orcamentos.isEmpty()) {
+            return null;
+        }
+        return orcamentos.stream()
+                .filter(o -> o != null)
+                .filter(o -> "producao".equals(normalizeQuoteType(o.getTipo())))
+                .map(o -> o.getValorTotalEstimado() == null ? BigDecimal.ZERO : o.getValorTotalEstimado())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private String normalizeQuoteType(String tipo) {
+        if (tipo == null || tipo.isBlank()) {
+            return "design";
+        }
+        return switch (tipo.trim().toLowerCase(Locale.ROOT)) {
+            case "producao", "produção", "production" -> "producao";
+            case "molde", "mold" -> "molde";
+            default -> "design";
+        };
+    }
+
+    private String resolveArticleName(ProjetoPersonalizado project) {
+        if (project == null) {
+            return "Projeto personalizado";
+        }
+        if (project.getTituloProjeto() != null && !project.getTituloProjeto().isBlank()) {
+            return project.getTituloProjeto();
+        }
+        return project.getId() == null ? "Projeto personalizado" : "Projeto " + project.getId();
     }
 
     private void showProjectDetails(ProjetoPersonalizado project) {

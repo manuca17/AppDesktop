@@ -184,44 +184,41 @@ public class FichaTecnicaService {
         }
     }
 
-    public CompletableFuture<FichaTecnica> updateForArtigo(Integer artigoId, FichaTecnica ficha) {
+    public CompletableFuture<FichaTecnica> updateForArtigo(Integer artigoId, Integer fichaId) {
         if (artigoId == null) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("ID do artigo e obrigatorio."));
         }
-        if (ficha == null) {
-            return CompletableFuture.failedFuture(new IllegalArgumentException("Ficha tecnica invalida."));
+        if (fichaId == null) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("ID da ficha tecnica e obrigatorio."));
         }
 
-        try {
-            String json = objectMapper.writeValueAsString(ficha);
-            HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + "/artigo/" + artigoId))
-                    .header("Content-Type", "application/json")
-                    .header("Accept", "application/json")
-                    .PUT(HttpRequest.BodyPublishers.ofString(json))
-                    .build();
+        HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + "/artigo/" + artigoId + "/" + fichaId))
+                .header("Accept", "application/json")
+                .PUT(HttpRequest.BodyPublishers.noBody())
+                .build();
 
-            return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenCompose(response -> {
-                        if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                            return CompletableFuture.completedFuture(parseSingle(response.body()));
-                        }
-                        String body = response.body();
-                        String message = (body == null || body.isBlank())
-                                ? defaultErrorMessage(response.statusCode())
-                                : body;
-                        return CompletableFuture.failedFuture(new IllegalStateException(message));
-                    });
-        } catch (IOException ex) {
-            return CompletableFuture.failedFuture(new IllegalStateException("Falha ao atualizar ficha tecnica.", ex));
-        }
+        return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenCompose(response -> {
+                    if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                        return CompletableFuture.completedFuture(parseSingle(response.body()));
+                    }
+                    String body = response.body();
+                    String message = (body == null || body.isBlank())
+                            ? defaultErrorMessage(response.statusCode())
+                            : body;
+                    return CompletableFuture.failedFuture(new IllegalStateException(message));
+                });
     }
 
-    public CompletableFuture<Void> deleteForArtigo(Integer artigoId) {
+    public CompletableFuture<Void> deleteForArtigo(Integer artigoId, Integer fichaId) {
         if (artigoId == null) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("ID do artigo e obrigatorio."));
         }
+        if (fichaId == null) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("ID da ficha tecnica e obrigatorio."));
+        }
 
-        HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + "/artigo/" + artigoId))
+        HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + "/artigo/" + artigoId + "/" + fichaId))
                 .header("Accept", "application/json")
                 .DELETE()
                 .build();
