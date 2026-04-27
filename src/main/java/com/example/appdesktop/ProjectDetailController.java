@@ -1025,12 +1025,6 @@ public class ProjectDetailController implements ClientPage {
                         return;
                     }
 
-                    Integer stock = artigo.getStock();
-                    if (stock != null && reorderQuantidade > stock) {
-                        showInfo("Reencomenda", "Stock insuficiente para o artigo. Disponivel: " + stock + ".");
-                        return;
-                    }
-
                     encomendaService.addItemAoCarrinho(currentUser.getId(), artigo.getId(), reorderQuantidade)
                             .whenComplete((carrinho, cartError) -> Platform.runLater(() -> {
                                 if (cartError != null) {

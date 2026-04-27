@@ -308,13 +308,22 @@ public class AdminProjectsController implements AdminPage {
                                         .findFirst()
                                         .orElse(null);
                                 if (existing != null) {
+                                    if (existing.getStock() != null) {
+                                        ArtigoCatalogo payload = new ArtigoCatalogo();
+                                        payload.setNome(existing.getNome());
+                                        payload.setPrecoUnitario(existing.getPrecoUnitario());
+                                        payload.setStock(null);
+                                        payload.setVisivel(existing.getVisivel());
+                                        return artigoService.update(existing.getId(), payload)
+                                                .thenApply(updated -> updated == null ? existing : updated);
+                                    }
                                     return CompletableFuture.completedFuture(existing);
                                 }
 
                                 ArtigoCatalogo artigo = new ArtigoCatalogo();
                                 artigo.setNome(artigoNome);
                                 artigo.setPrecoUnitario(unitPrice);
-                                artigo.setStock(quantidade);
+                                artigo.setStock(null); // null => stock ilimitado
                                 artigo.setVisivel(true);
                                 return artigoService.create(artigo);
                             });

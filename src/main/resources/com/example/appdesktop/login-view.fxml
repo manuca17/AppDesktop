@@ -59,7 +59,14 @@
                                             style="-fx-background-color: #d97706; -fx-text-fill: white; -fx-font-weight: bold;"
                                             text="Entrar como Cliente"/>
 
-                                    <Label style="-fx-text-fill: #4b5563;" text="Ainda nao tem conta? Registar"/>
+                                    <HBox alignment="CENTER_LEFT" spacing="6">
+                                        <children>
+                                            <Label style="-fx-text-fill: #4b5563;" text="Ainda nao tem conta?"/>
+                                            <Button mnemonicParsing="false" onAction="#onShowRegister"
+                                                    style="-fx-background-color: transparent; -fx-text-fill: #d97706; -fx-underline: true;"
+                                                    text="Registar"/>
+                                        </children>
+                                    </HBox>
                                 </children>
                             </VBox>
                         </content>

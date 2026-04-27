@@ -104,7 +104,7 @@ public class AdminCatalogController implements AdminPage {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        Label stockBadge = buildStockBadge(product.getStock() == null ? 0 : product.getStock());
+        Label stockBadge = buildStockBadge(product.getStock());
         header.getChildren().addAll(name, spacer, stockBadge);
 
         Label description = new Label("Sem descricao.");
@@ -115,7 +115,7 @@ public class AdminCatalogController implements AdminPage {
         priceRow.setAlignment(Pos.CENTER_LEFT);
         Label price = new Label(currencyFormat.format(product.getPrecoUnitario() == null ? BigDecimal.ZERO : product.getPrecoUnitario()));
         price.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #111827;");
-        Label stockLabel = new Label("Stock: " + (product.getStock() == null ? 0 : product.getStock()));
+        Label stockLabel = new Label(formatStockLabel(product.getStock()));
         stockLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #6b7280;");
         priceRow.getChildren().addAll(price, spacer, stockLabel);
 
@@ -139,9 +139,12 @@ public class AdminCatalogController implements AdminPage {
         return card;
     }
 
-    private Label buildStockBadge(int stock) {
+    private Label buildStockBadge(Integer stock) {
         Label badge;
-        if (stock == 0) {
+        if (isUnlimitedStock(stock)) {
+            badge = new Label("Ilimitado");
+            badge.setStyle("-fx-background-color: #e0f2fe; -fx-text-fill: #0369a1; -fx-padding: 3 8; -fx-background-radius: 999;");
+        } else if (stock == 0) {
             badge = new Label("Esgotado");
             badge.setStyle("-fx-background-color: #fef2f2; -fx-text-fill: #dc2626; -fx-padding: 3 8; -fx-background-radius: 999;");
         } else if (stock < 5) {
@@ -152,6 +155,14 @@ public class AdminCatalogController implements AdminPage {
             badge.setStyle("-fx-background-color: #dcfce7; -fx-text-fill: #166534; -fx-padding: 3 8; -fx-background-radius: 999;");
         }
         return badge;
+    }
+
+    private boolean isUnlimitedStock(Integer stock) {
+        return stock == null;
+    }
+
+    private String formatStockLabel(Integer stock) {
+        return isUnlimitedStock(stock) ? "Stock: Ilimitado" : "Stock: " + stock;
     }
 
     private void showProductDialog(ArtigoCatalogo existing) {
@@ -200,13 +211,21 @@ public class AdminCatalogController implements AdminPage {
         }
 
         BigDecimal price;
-        Integer stock;
+        Integer stock = null;
         try {
             price = new BigDecimal(priceRaw);
-            stock = Integer.parseInt(stockRaw);
         } catch (NumberFormatException ex) {
             showError("Dados invalidos", "Verifique o preco e o stock.");
             return;
+        }
+
+        if (!stockRaw.isBlank()) {
+            try {
+                stock = Integer.parseInt(stockRaw);
+            } catch (NumberFormatException ex) {
+                showError("Dados invalidos", "Verifique o preco e o stock.");
+                return;
+            }
         }
 
         ArtigoCatalogo payload = isEdit ? existing : new ArtigoCatalogo();

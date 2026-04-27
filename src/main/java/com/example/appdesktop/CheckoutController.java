@@ -1,10 +1,14 @@
 package com.example.appdesktop;
 
+import com.example.appdesktop.models.ArtigoCatalogo;
 import com.example.appdesktop.models.EncomendaCatalogo;
 import com.example.appdesktop.models.ItemEncomenda;
 import com.example.appdesktop.models.Utilizador;
+import com.example.appdesktop.models.ProjetoPersonalizado;
+import com.example.appdesktop.services.ArtigoCatalogoService;
 import com.example.appdesktop.services.EncomendaService;
 import com.example.appdesktop.services.ItemEncomendaService;
+import com.example.appdesktop.services.ProjetoPersonalizadoService;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
@@ -19,8 +23,13 @@ import javafx.scene.layout.VBox;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 public class CheckoutController implements ClientPage {
 
@@ -51,6 +60,8 @@ public class CheckoutController implements ClientPage {
 
     private final EncomendaService encomendaService = EncomendaService.getInstance();
     private final ItemEncomendaService itemEncomendaService = ItemEncomendaService.getInstance();
+    private final ArtigoCatalogoService artigoService = ArtigoCatalogoService.getInstance();
+    private final ProjetoPersonalizadoService projetoService = ProjetoPersonalizadoService.getInstance();
     private final NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("pt", "PT"));
 
     private List<ItemEncomenda> cartItems = new ArrayList<>();
@@ -88,7 +99,9 @@ public class CheckoutController implements ClientPage {
         confirmButton.setDisable(true);
         confirmButton.setText("A processar...");
 
-        encomendaService.checkout(currentUser.getId())
+        ensureUnlimitedStockForProjectItems(currentUser.getId())
+                .exceptionally(error -> null)
+                .thenCompose(ignore -> encomendaService.checkout(currentUser.getId()))
                 .whenComplete((encomenda, error) -> Platform.runLater(() -> {
                     confirmButton.setDisable(false);
                     confirmButton.setText("Confirmar Encomenda");
@@ -113,6 +126,98 @@ public class CheckoutController implements ClientPage {
                         navigator.navigateTo("orders");
                     }
                 }));
+    }
+
+    private CompletableFuture<Void> ensureUnlimitedStockForProjectItems(Integer utilizadorId) {
+        if (utilizadorId == null || cartItems.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        return projetoService.findByUtilizadorId(utilizadorId)
+                .exceptionally(error -> List.of())
+                .thenCompose(projects -> {
+                    Set<String> projectNames = new HashSet<>();
+                    for (ProjetoPersonalizado project : projects) {
+                        if (project == null) {
+                            continue;
+                        }
+                        if (!isCompletedProject(project.getEstadoAtual())) {
+                            continue;
+                        }
+                        projectNames.add(resolveProjectArticleName(project).toLowerCase(Locale.ROOT));
+                    }
+
+                    if (projectNames.isEmpty()) {
+                        return CompletableFuture.completedFuture(null);
+                    }
+
+                    return artigoService.findAll()
+                            .exceptionally(error -> List.of())
+                            .thenCompose(artigos -> updateUnlimitedStockForCartItems(projectNames, artigos));
+                });
+    }
+
+    private CompletableFuture<Void> updateUnlimitedStockForCartItems(Set<String> projectNames, List<ArtigoCatalogo> artigos) {
+        if (projectNames == null || projectNames.isEmpty() || cartItems.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        Map<Integer, ArtigoCatalogo> artigosById = new HashMap<>();
+        if (artigos != null) {
+            for (ArtigoCatalogo artigo : artigos) {
+                if (artigo != null && artigo.getId() != null) {
+                    artigosById.put(artigo.getId(), artigo);
+                }
+            }
+        }
+
+        List<CompletableFuture<?>> tasks = new ArrayList<>();
+        for (ItemEncomenda item : cartItems) {
+            if (item == null || item.getIdArtigo() == null || item.getIdArtigo().getId() == null) {
+                continue;
+            }
+            String name = item.resolvedNomeProduto();
+            if (name == null || !projectNames.contains(name.toLowerCase(Locale.ROOT))) {
+                continue;
+            }
+
+            ArtigoCatalogo artigo = artigosById.get(item.getIdArtigo().getId());
+            if (artigo == null || artigo.getId() == null || artigo.getStock() == null) {
+                continue;
+            }
+
+            ArtigoCatalogo payload = new ArtigoCatalogo();
+            payload.setNome(artigo.getNome());
+            payload.setPrecoUnitario(artigo.getPrecoUnitario());
+            payload.setStock(null);
+            payload.setVisivel(artigo.getVisivel());
+            tasks.add(artigoService.update(artigo.getId(), payload));
+        }
+
+        if (tasks.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+        return CompletableFuture.allOf(tasks.toArray(CompletableFuture[]::new));
+    }
+
+    private boolean isCompletedProject(String status) {
+        if (status == null || status.isBlank()) {
+            return false;
+        }
+        return switch (status.trim().toLowerCase(Locale.ROOT)) {
+            case "concluido", "concluído", "completed", "completo" -> true;
+            default -> false;
+        };
+    }
+
+    private String resolveProjectArticleName(ProjetoPersonalizado project) {
+        if (project == null) {
+            return "Projeto personalizado";
+        }
+        if (project.getTituloProjeto() != null && !project.getTituloProjeto().isBlank()) {
+            return project.getTituloProjeto();
+        }
+        return project.getId() == null ? "Projeto personalizado" : "Projeto " + project.getId();
     }
 
     private void loadCart() {
@@ -236,7 +341,9 @@ public class CheckoutController implements ClientPage {
         String paymentStatus = encomenda.getEstadoPagamento();
         if (paymentStatus != null && !paymentStatus.isBlank()) {
             String normalized = paymentStatus.trim().toLowerCase(Locale.ROOT);
-            return "pago".equals(normalized) || "paid".equals(normalized);
+            if ("pago".equals(normalized) || "paid".equals(normalized)) {
+                return true;
+            }
         }
         String estado = encomenda.getEstado();
         if (estado != null && !estado.isBlank()) {

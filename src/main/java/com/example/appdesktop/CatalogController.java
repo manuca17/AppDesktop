@@ -127,12 +127,12 @@ public class CatalogController implements ClientPage {
         Label price = new Label(currencyFormat.format(preco));
         price.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #111827;");
 
-        int stock = product.getStock() == null ? 0 : product.getStock();
+        Integer stock = product.getStock();
+        boolean unlimitedStock = isUnlimitedStock(stock);
         int inCart = resolveInCartQuantity(product.getId());
-        int availableToAdd = Math.max(0, stock - inCart);
+        int availableToAdd = resolveAvailableToAdd(stock, inCart);
 
-        Label stockLabel = new Label("Stock: " + stock + " unidades"
-                + (inCart > 0 ? " (" + inCart + " no carrinho)" : ""));
+        Label stockLabel = new Label(formatStockLabel(stock, inCart));
         stockLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #6b7280;");
 
         HBox actions = new HBox(8);
@@ -155,7 +155,7 @@ public class CatalogController implements ClientPage {
 
         Button addButton = new Button(availableToAdd == 0 ? "Esgotado" : "Adicionar ao Carrinho");
         addButton.setDisable(availableToAdd == 0);
-        addButton.setOnAction(event -> addToCart(product, qtySpinner.getValue(), availableToAdd));
+        addButton.setOnAction(event -> addToCart(product, qtySpinner.getValue(), availableToAdd, unlimitedStock));
         addButton.setStyle("-fx-background-color: #d97706; -fx-text-fill: white; -fx-font-weight: bold;");
         HBox.setHgrow(addButton, Priority.ALWAYS);
         addButton.setMaxWidth(Double.MAX_VALUE);
@@ -170,11 +170,11 @@ public class CatalogController implements ClientPage {
         alert.setTitle(product.getNome() == null ? "Artigo" : product.getNome());
         alert.setHeaderText("Detalhes do artigo");
         alert.setContentText("Preco: " + currencyFormat.format(product.getPrecoUnitario() == null ? BigDecimal.ZERO : product.getPrecoUnitario())
-                + "\nStock: " + (product.getStock() == null ? 0 : product.getStock()) + " unidades");
+                + "\nStock: " + formatStockDetails(product.getStock()));
         alert.showAndWait();
     }
 
-    private void addToCart(ArtigoCatalogo product, Integer quantidade, int maxPermitido) {
+    private void addToCart(ArtigoCatalogo product, Integer quantidade, int maxPermitido, boolean unlimitedStock) {
         Utilizador currentUser = Utilizador.getCurrentUser();
         if (currentUser == null || currentUser.getId() == null) {
             showAlert(Alert.AlertType.WARNING, "Sessao", "Tem de iniciar sessao para adicionar ao carrinho.");
@@ -186,7 +186,7 @@ public class CatalogController implements ClientPage {
             showAlert(Alert.AlertType.WARNING, "Quantidade", "Escolha uma quantidade valida.");
             return;
         }
-        if (qty > maxPermitido) {
+        if (!unlimitedStock && qty > maxPermitido) {
             showAlert(Alert.AlertType.WARNING, "Stock", "Quantidade superior ao stock disponivel.");
             return;
         }
@@ -288,6 +288,27 @@ public class CatalogController implements ClientPage {
         });
         cartButton.setVisible(true);
         cartButton.setManaged(true);
+    }
+
+    private boolean isUnlimitedStock(Integer stock) {
+        return stock == null;
+    }
+
+    private int resolveAvailableToAdd(Integer stock, int inCart) {
+        if (isUnlimitedStock(stock)) {
+            return Integer.MAX_VALUE;
+        }
+        int currentStock = stock == null ? 0 : stock;
+        return Math.max(0, currentStock - inCart);
+    }
+
+    private String formatStockLabel(Integer stock, int inCart) {
+        String base = isUnlimitedStock(stock) ? "Stock: Ilimitado" : "Stock: " + stock + " unidades";
+        return inCart > 0 ? base + " (" + inCart + " no carrinho)" : base;
+    }
+
+    private String formatStockDetails(Integer stock) {
+        return isUnlimitedStock(stock) ? "Ilimitado" : stock + " unidades";
     }
 
     private void showAlert(Alert.AlertType type, String title, String message) {

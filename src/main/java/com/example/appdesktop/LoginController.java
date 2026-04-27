@@ -46,6 +46,11 @@ public class LoginController {
         handleLogin(adminEmailField.getText(), adminPasswordField.getText(), true);
     }
 
+    @FXML
+    private void onShowRegister() {
+        navigateToRegister();
+    }
+
     private void handleLogin(String email, String password, boolean adminAccess) {
         if (email == null || email.isBlank() || password == null || password.isBlank()) {
             showAlert(Alert.AlertType.WARNING, "Dados invalidos", "Preencha email e password.");
@@ -116,6 +121,21 @@ public class LoginController {
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("Erro");
             alert.setHeaderText("Nao foi possivel abrir o dashboard");
+            alert.setContentText(ex.getMessage());
+            alert.showAndWait();
+        }
+    }
+
+    private void navigateToRegister() {
+        try {
+            Parent root = new FXMLLoader(HelloApplication.class.getResource("register-view.fxml")).load();
+            Stage stage = resolveStage();
+            stage.setScene(new Scene(root, 900, 720));
+            stage.setTitle("Taca Lab - Registo Cliente");
+        } catch (IOException ex) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Erro");
+            alert.setHeaderText("Nao foi possivel abrir o registo");
             alert.setContentText(ex.getMessage());
             alert.showAndWait();
         }

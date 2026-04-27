@@ -24,12 +24,14 @@ public class UtilizadorService {
     private final ObjectMapper objectMapper;
     private final String clientLoginUrl;
     private final String adminLoginUrl;
+    private final String clientRegisterUrl;
 
     private UtilizadorService() {
         this.httpClient = HttpClient.newHttpClient();
         this.objectMapper = new ObjectMapper();
         this.clientLoginUrl = resolveClientBaseUrl() + "/login";
         this.adminLoginUrl = resolveAdminBaseUrl() + "/login";
+        this.clientRegisterUrl = resolveClientBaseUrl() + "/registar";
     }
 
     public static UtilizadorService getInstance() {
@@ -42,6 +44,72 @@ public class UtilizadorService {
 
     public CompletableFuture<Utilizador> loginAdmin(String email, String password) {
         return login(email, password, adminLoginUrl);
+    }
+
+    public CompletableFuture<Utilizador> registerClient(Utilizador utilizador) {
+        if (utilizador == null) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Dados de registo invalidos."));
+        }
+
+        Utilizador requestUser = utilizador;
+
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("nomeEmpresa", utilizador.getNomeEmpresa());
+        payload.put("nif", utilizador.getNif());
+        payload.put("email", utilizador.getEmail());
+        payload.put("password", utilizador.getPassword());
+        if (utilizador.getTelefone() != null && !utilizador.getTelefone().isBlank()) {
+            payload.put("telefone", utilizador.getTelefone());
+        }
+        if (utilizador.getMoradaFaturacao() != null && !utilizador.getMoradaFaturacao().isBlank()) {
+            payload.put("moradaFaturacao", utilizador.getMoradaFaturacao());
+        }
+
+        final String requestBody;
+        try {
+            requestBody = objectMapper.writeValueAsString(payload);
+        } catch (IOException ex) {
+            return CompletableFuture.failedFuture(new IllegalStateException("Falha ao preparar pedido de registo."));
+        }
+
+        HttpRequest request = HttpRequest.newBuilder(URI.create(clientRegisterUrl))
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
+
+        return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenCompose(response -> {
+                    JsonNode body = parseResponse(response.body());
+                    if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                        Utilizador saved = new Utilizador();
+                        saved.setId(readInteger(body, "id"));
+                        if (body != null) {
+                            saved.setNomeEmpresa(readText(body, "nomeEmpresa"));
+                            saved.setEmail(readText(body, "email"));
+                            saved.setPerfil(readText(body, "perfil"));
+                        }
+                        if (saved.getNomeEmpresa() == null || saved.getNomeEmpresa().isBlank()) {
+                            saved.setNomeEmpresa(requestUser.getNomeEmpresa());
+                        }
+                        if (saved.getEmail() == null || saved.getEmail().isBlank()) {
+                            saved.setEmail(requestUser.getEmail());
+                        }
+                        return CompletableFuture.completedFuture(saved);
+                    }
+
+                    String message = body != null && readText(body, "message") != null && !readText(body, "message").isBlank()
+                            ? readText(body, "message")
+                            : defaultRegisterErrorMessage(response.statusCode());
+                    return CompletableFuture.failedFuture(new IllegalArgumentException(message));
+                })
+                .exceptionallyCompose(ex -> {
+                    if (ex instanceof IllegalArgumentException || ex instanceof IllegalStateException) {
+                        return CompletableFuture.failedFuture(ex);
+                    }
+                    Throwable cause = ex.getCause() == null ? ex : ex.getCause();
+                    return CompletableFuture.failedFuture(new IllegalStateException("Nao foi possivel contactar a API de registo em " + clientRegisterUrl + ".", cause));
+                });
     }
 
     // Backward compatibility: default login points to client endpoint.
@@ -125,6 +193,27 @@ public class UtilizadorService {
         return field.asText();
     }
 
+    private Integer readInteger(JsonNode node, String fieldName) {
+        if (node == null) {
+            return null;
+        }
+        JsonNode field = node.get(fieldName);
+        if (field == null || field.isNull()) {
+            return null;
+        }
+        if (field.isInt()) {
+            return field.asInt();
+        }
+        if (field.isTextual()) {
+            try {
+                return Integer.parseInt(field.asText());
+            } catch (NumberFormatException ex) {
+                return null;
+            }
+        }
+        return null;
+    }
+
     private String defaultErrorMessage(int statusCode) {
         if (statusCode == 401) {
             return "Credenciais invalidas.";
@@ -133,6 +222,16 @@ public class UtilizadorService {
             return "Dados de login invalidos.";
         }
         return "Nao foi possivel autenticar com a API.";
+    }
+
+    private String defaultRegisterErrorMessage(int statusCode) {
+        if (statusCode == 400) {
+            return "Dados de registo invalidos.";
+        }
+        if (statusCode == 409) {
+            return "Conta ja existe.";
+        }
+        return "Nao foi possivel criar a conta.";
     }
 
     private String resolveClientBaseUrl() {
