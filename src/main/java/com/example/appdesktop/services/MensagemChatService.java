@@ -77,6 +77,10 @@ public class MensagemChatService {
         return createForRole(projetoId, "artesa", artesaId, conteudo, null);
     }
 
+    public CompletableFuture<MensagemChat> createAsArtesa(Integer projetoId, Integer artesaId, String conteudo, String urlFoto) {
+        return createForRole(projetoId, "artesa", artesaId, conteudo, urlFoto);
+    }
+
     public CompletableFuture<MensagemChat> createAsUtilizador(Integer projetoId, Integer utilizadorId, String conteudo) {
         return createForRole(projetoId, "utilizador", utilizadorId, conteudo, null);
     }
@@ -88,7 +92,7 @@ public class MensagemChatService {
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("conteudo", conteudo);
-        payload.put("urlFoto", urlFoto);
+        payload.put("url_foto", urlFoto);
         return create(baseUrl + "/projeto/" + projetoId + "/" + role + "/" + senderId, payload);
     }
 
@@ -97,8 +101,11 @@ public class MensagemChatService {
             return CompletableFuture.failedFuture(new IllegalArgumentException("URL do projeto e obrigatorio."));
         }
         Object rawContent = payload.get("conteudo");
-        if (!(rawContent instanceof String) || ((String) rawContent).isBlank()) {
-            return CompletableFuture.failedFuture(new IllegalArgumentException("Conteudo da mensagem e obrigatorio."));
+        Object rawFoto = payload.get("url_foto");
+        boolean hasContent = rawContent instanceof String && !((String) rawContent).isBlank();
+        boolean hasFoto = rawFoto instanceof String && !((String) rawFoto).isBlank();
+        if (!hasContent && !hasFoto) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Mensagem vazia (sem texto nem foto)."));
         }
 
         try {
@@ -157,13 +164,13 @@ public class MensagemChatService {
         mensagem.setDataEnvio(readInstant(node, "dataEnvio", "data_envio"));
 
         ProjetoPersonalizado projeto = new ProjetoPersonalizado();
-        Integer projetoId = readNestedId(node, "idProjeto", "projetoId", "projeto");
+        Integer projetoId = readNestedId(node, "idProjeto", "id_projeto", "projetoId", "projeto");
         if (projetoId != null) {
             projeto.setId(projetoId);
             mensagem.setIdProjeto(projeto);
         }
 
-        JsonNode utilizadorNode = node.get("idRemetenteUtilizador");
+        JsonNode utilizadorNode = firstNonNull(node, "idRemetenteUtilizador", "id_remetente_utilizador");
         if (utilizadorNode != null && !utilizadorNode.isNull()) {
             Utilizador utilizador = new Utilizador();
             if (utilizadorNode.isObject()) {
@@ -176,7 +183,7 @@ public class MensagemChatService {
             mensagem.setIdRemetenteUtilizador(utilizador);
         }
 
-        JsonNode artesaNode = node.get("idRemetenteArtesa");
+        JsonNode artesaNode = firstNonNull(node, "idRemetenteArtesa", "id_remetente_artesa");
         if (artesaNode != null && !artesaNode.isNull()) {
             Artesa artesa = new Artesa();
             if (artesaNode.isObject()) {
@@ -190,6 +197,14 @@ public class MensagemChatService {
         }
 
         return mensagem;
+    }
+
+    private JsonNode firstNonNull(JsonNode node, String... fieldNames) {
+        for (String name : fieldNames) {
+            JsonNode f = node.get(name);
+            if (f != null && !f.isNull()) return f;
+        }
+        return null;
     }
 
     private Integer readNestedId(JsonNode node, String... fieldNames) {

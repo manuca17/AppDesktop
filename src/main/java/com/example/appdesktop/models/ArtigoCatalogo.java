@@ -1,6 +1,7 @@
 package com.example.appdesktop.models;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public class ArtigoCatalogo {
 
@@ -9,6 +10,8 @@ public class ArtigoCatalogo {
     private BigDecimal precoUnitario;
     private Integer stock;
     private Boolean visivel;
+    private String fotoUrl;
+    private List<ArtigoFoto> fotos;
 
     public Integer getId() {
         return id;
@@ -48,5 +51,21 @@ public class ArtigoCatalogo {
 
     public void setVisivel(Boolean visivel) {
         this.visivel = visivel;
+    }
+
+    public String getFotoUrl() {
+        return fotoUrl;
+    }
+
+    public void setFotoUrl(String fotoUrl) {
+        this.fotoUrl = fotoUrl;
+    }
+
+    public List<ArtigoFoto> getFotos() {
+        return fotos;
+    }
+
+    public void setFotos(List<ArtigoFoto> fotos) {
+        this.fotos = fotos;
     }
 }

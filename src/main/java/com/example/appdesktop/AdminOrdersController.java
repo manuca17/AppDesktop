@@ -20,6 +20,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
+import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -39,6 +40,9 @@ public class AdminOrdersController implements AdminPage {
     @FXML private Label deliveredOrdersLabel;
     @FXML private VBox ordersContainer;
     @FXML private Label emptyLabel;
+    @FXML private VBox pendingReordersContainer;
+    @FXML private Label pendingReordersBadge;
+    @FXML private Label emptyReordersLabel;
 
     private final ClientPortalDataService dataService = new ClientPortalDataService();
     private final EncomendaService encomendaService = EncomendaService.getInstance();
@@ -53,6 +57,7 @@ public class AdminOrdersController implements AdminPage {
         statusCombo.getItems().setAll("Todos", "Pendente", "Pago", "Enviado", "Entregue");
         statusCombo.setValue("Todos");
         loadOrders();
+        loadPendingReorders();
     }
 
     @Override
@@ -224,6 +229,146 @@ public class AdminOrdersController implements AdminPage {
                         }
                         loadOrders();
                         showInfo("Estado atualizado com sucesso.");
+                    }));
+        }
+    }
+
+    private void loadPendingReorders() {
+        encomendaService.getPendingReorders()
+                .whenComplete((reorders, error) -> Platform.runLater(() -> {
+                    if (error != null || reorders == null) {
+                        renderPendingReorders(List.of());
+                    } else {
+                        renderPendingReorders(reorders);
+                    }
+                }));
+    }
+
+    private void renderPendingReorders(List<EncomendaCatalogo> reorders) {
+        if (pendingReordersContainer == null) return;
+        pendingReordersContainer.getChildren().clear();
+
+        boolean hasReorders = !reorders.isEmpty();
+        if (pendingReordersBadge != null) {
+            pendingReordersBadge.setText(String.valueOf(reorders.size()));
+            pendingReordersBadge.setVisible(hasReorders);
+            pendingReordersBadge.setManaged(hasReorders);
+        }
+        if (emptyReordersLabel != null) {
+            emptyReordersLabel.setVisible(!hasReorders);
+            emptyReordersLabel.setManaged(!hasReorders);
+        }
+
+        for (EncomendaCatalogo reorder : reorders) {
+            pendingReordersContainer.getChildren().add(createReorderCard(reorder));
+        }
+    }
+
+    private VBox createReorderCard(EncomendaCatalogo reorder) {
+        VBox card = new VBox(10);
+        card.setPadding(new Insets(14));
+        card.setStyle("-fx-background-color: white; -fx-border-color: #fed7aa; -fx-border-radius: 10; -fx-background-radius: 10;");
+
+        HBox header = new HBox(8);
+        String orderId = reorder.getId() == null ? "REENC-?" : "REENC-" + reorder.getId();
+        Label id = new Label(orderId);
+        id.setStyle("-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #111827;");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Label badge = new Label("Aguarda Aprovacao");
+        badge.setStyle("-fx-background-color: #fef3c7; -fx-text-fill: #92400e; -fx-padding: 4 8; -fx-background-radius: 999;");
+        header.getChildren().addAll(id, spacer, badge);
+
+        String clientName = resolveClientName(reorder);
+        LocalDate date = reorder.getDataEncomenda() == null ? LocalDate.now() : reorder.getDataEncomenda();
+        Label meta = new Label("Cliente: " + clientName + "  |  " + dateFormatter.format(date));
+        meta.setStyle("-fx-font-size: 12px; -fx-text-fill: #6b7280;");
+
+        HBox actions = new HBox(8);
+        javafx.scene.control.Button approveBtn = new javafx.scene.control.Button("Aprovar");
+        approveBtn.setStyle("-fx-background-color: #16a34a; -fx-text-fill: white;");
+        approveBtn.setOnAction(e -> openApproveReorderDialog(reorder));
+
+        javafx.scene.control.Button rejectBtn = new javafx.scene.control.Button("Rejeitar");
+        rejectBtn.setStyle("-fx-background-color: #fef2f2; -fx-text-fill: #dc2626; -fx-border-color: #fca5a5; -fx-border-radius: 6;");
+        rejectBtn.setOnAction(e -> rejectReorder(reorder));
+
+        actions.getChildren().addAll(approveBtn, rejectBtn);
+        card.getChildren().addAll(header, meta, actions);
+        return card;
+    }
+
+    private void openApproveReorderDialog(EncomendaCatalogo reorder) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Aprovar Reencomenda");
+        dialog.setHeaderText("Reencomenda #" + (reorder.getId() == null ? "?" : reorder.getId()));
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(16));
+
+        ColumnConstraints col1 = new ColumnConstraints(140);
+        ColumnConstraints col2 = new ColumnConstraints(220);
+        grid.getColumnConstraints().addAll(col1, col2);
+
+        javafx.scene.control.TextField precoField = new javafx.scene.control.TextField();
+        precoField.setPromptText("Ex: 150.00");
+
+        grid.addRow(0, new Label("Preco aprovado (EUR):"), precoField);
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(
+                new ButtonType("Aprovar", ButtonBar.ButtonData.OK_DONE),
+                ButtonType.CANCEL
+        );
+
+        Optional<ButtonType> result = dialog.showAndWait();
+        if (result.isEmpty() || result.get().getButtonData() != ButtonBar.ButtonData.OK_DONE) {
+            return;
+        }
+
+        String precoRaw = precoField.getText() == null ? "" : precoField.getText().trim().replace(",", ".");
+        if (precoRaw.isBlank()) {
+            showInfo("Indique o preco de aprovacao.");
+            return;
+        }
+
+        BigDecimal preco;
+        try {
+            preco = new BigDecimal(precoRaw);
+        } catch (NumberFormatException ex) {
+            showInfo("Valor de preco invalido.");
+            return;
+        }
+
+        encomendaService.approveReorder(reorder.getId(), preco)
+                .whenComplete((updated, error) -> Platform.runLater(() -> {
+                    if (error != null) {
+                        showInfo("Nao foi possivel aprovar a reencomenda.");
+                        return;
+                    }
+                    showInfo("Reencomenda aprovada com sucesso.");
+                    loadPendingReorders();
+                }));
+    }
+
+    private void rejectReorder(EncomendaCatalogo reorder) {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Rejeitar Reencomenda");
+        confirm.setHeaderText("Rejeitar reencomenda #" + (reorder.getId() == null ? "?" : reorder.getId()) + "?");
+        confirm.setContentText("Esta acao nao pode ser desfeita.");
+        Optional<ButtonType> result = confirm.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            encomendaService.rejectReorder(reorder.getId())
+                    .whenComplete((updated, error) -> Platform.runLater(() -> {
+                        if (error != null) {
+                            showInfo("Nao foi possivel rejeitar a reencomenda.");
+                            return;
+                        }
+                        showInfo("Reencomenda rejeitada.");
+                        loadPendingReorders();
                     }));
         }
     }

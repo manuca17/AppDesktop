@@ -12,9 +12,11 @@ import com.example.appdesktop.services.ProjetoPersonalizadoService;
 import com.example.appdesktop.services.ReuniaoService;
 import com.example.appdesktop.services.FichaTecnicaService;
 import com.example.appdesktop.services.ArtigoCatalogoService;
+import com.example.appdesktop.services.UploadService;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
@@ -26,12 +28,17 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
+
+import java.io.File;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -63,6 +70,7 @@ public class AdminProjectsController implements AdminPage {
     private final ReuniaoService reuniaoService = ReuniaoService.getInstance();
     private final FichaTecnicaService fichaTecnicaService = FichaTecnicaService.getInstance();
     private final ArtigoCatalogoService artigoService = ArtigoCatalogoService.getInstance();
+    private final UploadService uploadService = UploadService.getInstance();
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private List<ProjetoPersonalizado> allProjects = new ArrayList<>();
@@ -433,6 +441,7 @@ public class AdminProjectsController implements AdminPage {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Chat com Cliente");
         dialog.setHeaderText(resolveTitle(project));
+        dialog.getDialogPane().setPrefWidth(560);
 
         VBox root = new VBox(10);
         root.setPadding(new Insets(12));
@@ -442,38 +451,86 @@ public class AdminProjectsController implements AdminPage {
         Label clientLabel = new Label("Cliente: " + clientName);
         clientLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #111827;");
 
-        if (messages.isEmpty()) {
-            messages.add(new ChatEntry("client", clientName, "Ola! Pode partilhar o estado atual do projeto?", LocalTime.now().minusMinutes(25).toString()));
-        }
-
         VBox messagesBox = new VBox(8);
         messagesBox.setPadding(new Insets(10));
         renderChatMessages(messagesBox, messages);
 
         ScrollPane chatScroll = new ScrollPane(messagesBox);
         chatScroll.setFitToWidth(true);
-        chatScroll.setPrefViewportHeight(300);
+        chatScroll.setPrefViewportHeight(320);
         chatScroll.setStyle("-fx-background-color: white; -fx-background: white; -fx-border-color: #e5e7eb; -fx-border-radius: 8; -fx-background-radius: 8;");
 
         TextArea inputArea = new TextArea();
         inputArea.setPromptText("Escreva a sua mensagem...");
         inputArea.setPrefRowCount(3);
 
-        root.getChildren().addAll(clientLabel, chatScroll, inputArea);
+        Button sendBtn = new Button("Enviar");
+        sendBtn.setStyle("-fx-background-color: #2563eb; -fx-text-fill: white; -fx-border-radius: 6;");
+        sendBtn.setOnAction(e -> {
+            String text = inputArea.getText() == null ? "" : inputArea.getText().trim();
+            if (text.isBlank()) return;
+            Utilizador currentUser = Utilizador.getCurrentUser();
+            if (project.getId() == null || currentUser == null || currentUser.getId() == null) return;
+            sendBtn.setDisable(true);
+            mensagemChatService.createAsArtesa(project.getId(), currentUser.getId(), text)
+                    .whenComplete((saved, error) -> Platform.runLater(() -> {
+                        sendBtn.setDisable(false);
+                        if (error != null) return;
+                        inputArea.clear();
+                        reloadChatMessages(project, messagesBox, chatScroll);
+                    }));
+        });
+
+        Button fotoBtn = new Button("Enviar foto...");
+        fotoBtn.setStyle("-fx-background-color: transparent; -fx-border-color: #d1d5db; -fx-border-radius: 6;");
+        fotoBtn.setOnAction(e -> {
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle("Selecionar imagem");
+            chooser.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter("Imagens", "*.jpg", "*.jpeg", "*.png", "*.webp", "*.gif"));
+            File file = chooser.showOpenDialog(fotoBtn.getScene().getWindow());
+            if (file == null) return;
+            fotoBtn.setDisable(true);
+            fotoBtn.setText("A enviar...");
+            Utilizador currentUser = Utilizador.getCurrentUser();
+            if (project.getId() == null || currentUser == null || currentUser.getId() == null) {
+                fotoBtn.setDisable(false);
+                fotoBtn.setText("Enviar foto...");
+                return;
+            }
+            uploadService.uploadImage(file)
+                    .thenCompose(url -> mensagemChatService.createAsArtesa(project.getId(), currentUser.getId(), null, url))
+                    .whenComplete((saved, error) -> Platform.runLater(() -> {
+                        fotoBtn.setDisable(false);
+                        fotoBtn.setText("Enviar foto...");
+                        if (error != null) {
+                            Throwable cause = error.getCause() != null ? error.getCause() : error;
+                            showInfo("Erro ao enviar foto: " + cause.getMessage());
+                            return;
+                        }
+                        reloadChatMessages(project, messagesBox, chatScroll);
+                    }));
+        });
+
+        HBox inputRow = new HBox(8, inputArea, sendBtn);
+        inputRow.setAlignment(Pos.BOTTOM_LEFT);
+        HBox.setHgrow(inputArea, Priority.ALWAYS);
+
+        root.getChildren().addAll(clientLabel, chatScroll, inputRow, fotoBtn);
 
         dialog.getDialogPane().setContent(root);
-        dialog.getDialogPane().getButtonTypes().addAll(
-                new ButtonType("Enviar", ButtonBar.ButtonData.OK_DONE),
-                ButtonType.CANCEL
-        );
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.showAndWait();
+    }
 
-        Optional<ButtonType> result = dialog.showAndWait();
-        if (result.isPresent() && result.get().getButtonData() == ButtonBar.ButtonData.OK_DONE) {
-            String newMessage = inputArea.getText() == null ? "" : inputArea.getText().trim();
-            if (!newMessage.isBlank()) {
-                sendChatMessage(project, clientName, newMessage);
-            }
-        }
+    private void reloadChatMessages(ProjetoPersonalizado project, VBox messagesBox, ScrollPane chatScroll) {
+        mensagemChatService.findByProjetoId(project.getId())
+                .whenComplete((msgs, err) -> Platform.runLater(() -> {
+                    if (msgs != null) {
+                        renderChatMessages(messagesBox, toChatEntries(project, msgs));
+                        chatScroll.setVvalue(1.0);
+                    }
+                }));
     }
 
     private void sendChatMessage(ProjetoPersonalizado project, String clientName, String content) {
@@ -527,7 +584,8 @@ public class AdminProjectsController implements AdminPage {
                     fromAdmin ? "admin" : "client",
                     senderName,
                     message.getConteudo() == null ? "" : message.getConteudo(),
-                    time
+                    time,
+                    message.getUrlFoto()
             ));
         }
         return entries;
@@ -551,14 +609,26 @@ public class AdminProjectsController implements AdminPage {
             Label sender = new Label(message.senderName());
             sender.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #6b7280;");
 
-            Label content = new Label(message.message());
-            content.setWrapText(true);
-            content.setStyle("-fx-text-fill: #111827;");
+            bubble.getChildren().add(sender);
+
+            if (message.photoUrl() != null && !message.photoUrl().isBlank()) {
+                ImageView photoView = new ImageView(new Image(message.photoUrl(), 240, 180, true, true, true));
+                photoView.setFitWidth(240);
+                photoView.setPreserveRatio(true);
+                bubble.getChildren().add(photoView);
+            }
+
+            if (message.message() != null && !message.message().isBlank()) {
+                Label content = new Label(message.message());
+                content.setWrapText(true);
+                content.setStyle("-fx-text-fill: #111827;");
+                bubble.getChildren().add(content);
+            }
 
             Label time = new Label(formatTime(message.time()));
             time.setStyle("-fx-font-size: 10px; -fx-text-fill: #9ca3af;");
 
-            bubble.getChildren().addAll(sender, content, time);
+            bubble.getChildren().add(time);
 
             Region spacer = new Region();
             HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -652,7 +722,8 @@ public class AdminProjectsController implements AdminPage {
                 .thenCompose(saved -> projetoService.updateEstado(project.getId(), "orcamento_enviado"))
                 .whenComplete((updated, error) -> Platform.runLater(() -> {
                     if (error != null) {
-                        showInfo("Nao foi possivel submeter o orcamento.");
+                        Throwable cause = error.getCause() != null ? error.getCause() : error;
+                        showInfo("Nao foi possivel submeter o orcamento: " + cause.getMessage());
                         return;
                     }
                     loadProjects();
@@ -715,7 +786,8 @@ public class AdminProjectsController implements AdminPage {
         reuniaoService.createForProjetoArtesa(project.getId(), currentUser.getId(), data, hora, tipo, local)
                 .whenComplete((created, error) -> Platform.runLater(() -> {
                     if (error != null) {
-                        showInfo("Nao foi possivel agendar a reuniao. " + formatError(error));
+                        Throwable cause = error.getCause() != null ? error.getCause() : error;
+                        showInfo("Nao foi possivel agendar a reuniao: " + cause.getMessage());
                         return;
                     }
                     showInfo("Reuniao agendada com sucesso.");
@@ -846,12 +918,56 @@ public class AdminProjectsController implements AdminPage {
         TextArea observacoesArea = new TextArea(ficha == null ? "" : nullToEmpty(ficha.getObservacoes()));
         observacoesArea.setPrefRowCount(3);
 
+        // foto design
+        Label fotoDesignLabel = new Label(ficha != null && ficha.getFotoDesign() != null ? "Foto design: " + ficha.getFotoDesign() : "Sem foto design");
+        fotoDesignLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #6b7280;");
+        fotoDesignLabel.setWrapText(true);
+        final String[] fotoDesignUrl = {ficha == null ? null : ficha.getFotoDesign()};
+        Button uploadDesignBtn = new Button("Carregar foto design...");
+        uploadDesignBtn.setStyle("-fx-background-color: transparent; -fx-border-color: #d1d5db; -fx-border-radius: 6;");
+        uploadDesignBtn.setOnAction(ev -> {
+            FileChooser fc = new FileChooser();
+            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Imagens", "*.jpg", "*.jpeg", "*.png", "*.webp"));
+            File f2 = fc.showOpenDialog(uploadDesignBtn.getScene().getWindow());
+            if (f2 == null) return;
+            uploadDesignBtn.setDisable(true);
+            uploadService.uploadImage(f2).whenComplete((url, err) -> Platform.runLater(() -> {
+                uploadDesignBtn.setDisable(false);
+                if (err != null) return;
+                fotoDesignUrl[0] = url;
+                fotoDesignLabel.setText("Foto design: " + url);
+            }));
+        });
+
+        // foto prototipo
+        Label fotoPrototipoLabel = new Label(ficha != null && ficha.getFotoPrototipo() != null ? "Foto prototipo: " + ficha.getFotoPrototipo() : "Sem foto prototipo");
+        fotoPrototipoLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #6b7280;");
+        fotoPrototipoLabel.setWrapText(true);
+        final String[] fotoPrototipoUrl = {ficha == null ? null : ficha.getFotoPrototipo()};
+        Button uploadPrototipoBtn = new Button("Carregar foto prototipo...");
+        uploadPrototipoBtn.setStyle("-fx-background-color: transparent; -fx-border-color: #d1d5db; -fx-border-radius: 6;");
+        uploadPrototipoBtn.setOnAction(ev -> {
+            FileChooser fc = new FileChooser();
+            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Imagens", "*.jpg", "*.jpeg", "*.png", "*.webp"));
+            File f2 = fc.showOpenDialog(uploadPrototipoBtn.getScene().getWindow());
+            if (f2 == null) return;
+            uploadPrototipoBtn.setDisable(true);
+            uploadService.uploadImage(f2).whenComplete((url, err) -> Platform.runLater(() -> {
+                uploadPrototipoBtn.setDisable(false);
+                if (err != null) return;
+                fotoPrototipoUrl[0] = url;
+                fotoPrototipoLabel.setText("Foto prototipo: " + url);
+            }));
+        });
+
         grid.addRow(0, new Label("Tipo barro"), tipoBarroField);
         grid.addRow(1, new Label("Cor vidrado"), corVidradoField);
         grid.addRow(2, new Label("Temperatura cozedura"), temperaturaField);
         grid.addRow(3, new Label("Tempo secagem"), tempoSecagemField);
         grid.addRow(4, new Label("Ref. molde"), refMoldeField);
         grid.addRow(5, new Label("Observacoes"), observacoesArea);
+        grid.addRow(6, new Label("Design"), new VBox(4, fotoDesignLabel, uploadDesignBtn));
+        grid.addRow(7, new Label("Prototipo"), new VBox(4, fotoPrototipoLabel, uploadPrototipoBtn));
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(
@@ -871,6 +987,8 @@ public class AdminProjectsController implements AdminPage {
         payload.setRefMolde(nullIfBlank(refMoldeField.getText()));
         payload.setObservacoes(nullIfBlank(observacoesArea.getText()));
         payload.setTemperaturaCozedura(parseInteger(temperaturaField.getText()));
+        payload.setFotoDesign(fotoDesignUrl[0]);
+        payload.setFotoPrototipo(fotoPrototipoUrl[0]);
 
         CompletableFuture<?> request = ficha == null
                 ? fichaTecnicaService.create(projetoId, payload)
@@ -992,6 +1110,6 @@ public class AdminProjectsController implements AdminPage {
         return normalizeStatus(label);
     }
 
-    private record ChatEntry(String senderType, String senderName, String message, String time) {
+    private record ChatEntry(String senderType, String senderName, String message, String time, String photoUrl) {
     }
 }

@@ -113,10 +113,10 @@ public class ReuniaoService {
         String dataHora = OffsetDateTime.of(data.atTime(parsedTime), ZoneOffset.UTC)
                 .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
 
-        String endpoint = baseUrl + "/projeto/" + projetoId + "/artesa/" + artesaId;
+        String endpoint = baseUrl + "/projeto/" + projetoId;
         try {
             java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>();
-            payload.put("dataHora", dataHora);
+            payload.put("data_hora", dataHora);
             payload.put("tipo", (tipo == null || tipo.isBlank()) ? null : tipo.trim());
             payload.put("local", (local == null || local.isBlank()) ? null : local.trim());
 

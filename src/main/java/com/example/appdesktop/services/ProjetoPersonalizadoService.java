@@ -175,19 +175,19 @@ public class ProjetoPersonalizadoService {
     private ProjetoPersonalizado mapProjeto(JsonNode node) {
         ProjetoPersonalizado projeto = new ProjetoPersonalizado();
         projeto.setId(readInteger(node, "id"));
-        projeto.setTituloProjeto(readText(node, "tituloProjeto"));
+        projeto.setTituloProjeto(readText(node, "titulo_projeto", "tituloProjeto"));
         projeto.setBriefing(readText(node, "briefing"));
-        projeto.setEstadoAtual(readText(node, "estadoAtual"));
-        projeto.setDataCriacao(readInstant(node, "dataCriacao"));
-        projeto.setIdArtesa(readNestedId(node, "idArtesa"));
+        projeto.setEstadoAtual(readText(node, "estado_atual", "estadoAtual"));
+        projeto.setDataCriacao(readInstant(node, "data_criacao", "dataCriacao"));
+        projeto.setIdArtesa(readNestedId(node, "id_artesa", "idArtesa"));
         projeto.setQuantidade(readInteger(node, "quantidade"));
 
-        JsonNode utilizadorNode = node.get("idUtilizador");
+        JsonNode utilizadorNode = firstNonNull(node, "id_utilizador", "idUtilizador");
         if (utilizadorNode != null && !utilizadorNode.isNull()) {
             Utilizador utilizador = new Utilizador();
             if (utilizadorNode.isObject()) {
                 utilizador.setId(readInteger(utilizadorNode, "id"));
-                utilizador.setNomeEmpresa(readText(utilizadorNode, "nomeEmpresa"));
+                utilizador.setNomeEmpresa(readText(utilizadorNode, "nome_empresa", "nomeEmpresa"));
                 utilizador.setEmail(readText(utilizadorNode, "email"));
             } else if (utilizadorNode.isNumber()) {
                 utilizador.setId(utilizadorNode.asInt());
@@ -198,16 +198,23 @@ public class ProjetoPersonalizadoService {
         return projeto;
     }
 
-    private Integer readNestedId(JsonNode node, String fieldName) {
-        JsonNode field = node.get(fieldName);
-        if (field == null || field.isNull()) {
-            return null;
+    private JsonNode firstNonNull(JsonNode node, String... fieldNames) {
+        for (String name : fieldNames) {
+            JsonNode f = node.get(name);
+            if (f != null && !f.isNull()) return f;
         }
-        if (field.isNumber()) {
-            return field.asInt();
-        }
-        if (field.isObject()) {
-            return readInteger(field, "id");
+        return null;
+    }
+
+    private Integer readNestedId(JsonNode node, String... fieldNames) {
+        for (String fieldName : fieldNames) {
+            JsonNode field = node.get(fieldName);
+            if (field == null || field.isNull()) continue;
+            if (field.isNumber()) return field.asInt();
+            if (field.isObject()) {
+                Integer id = readInteger(field, "id");
+                if (id != null) return id;
+            }
         }
         return null;
     }
@@ -220,25 +227,27 @@ public class ProjetoPersonalizadoService {
         return field.asInt();
     }
 
-    private String readText(JsonNode node, String fieldName) {
-        JsonNode field = node.get(fieldName);
-        if (field == null || field.isNull()) {
-            return null;
+    private String readText(JsonNode node, String... fieldNames) {
+        for (String fieldName : fieldNames) {
+            JsonNode field = node.get(fieldName);
+            if (field == null || field.isNull()) continue;
+            String v = field.asText();
+            if (v != null && !v.isBlank()) return v;
         }
-        return field.asText();
+        return null;
     }
 
-    private Instant readInstant(JsonNode node, String fieldName) {
-        String raw = readText(node, fieldName);
-        if (raw == null || raw.isBlank()) {
-            return null;
+    private Instant readInstant(JsonNode node, String... fieldNames) {
+        for (String fieldName : fieldNames) {
+            String raw = readText(node, fieldName);
+            if (raw == null || raw.isBlank()) continue;
+            try {
+                return Instant.parse(raw);
+            } catch (DateTimeParseException ex) {
+                // try next
+            }
         }
-
-        try {
-            return Instant.parse(raw);
-        } catch (DateTimeParseException ex) {
-            return null;
-        }
+        return null;
     }
 
     private String defaultErrorMessage(int statusCode) {

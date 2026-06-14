@@ -59,7 +59,15 @@ public class OrcamentoService {
         }
 
         try {
-            String json = objectMapper.writeValueAsString(orcamento);
+            // backend uses SNAKE_CASE so we build the map manually
+            java.util.Map<String, Object> body = new java.util.LinkedHashMap<>();
+            body.put("tipo", orcamento.getTipo());
+            body.put("valor_total_estimado", orcamento.getValorTotalEstimado());
+            body.put("observacoes", orcamento.getObservacoes());
+            if (orcamento.getIdArtesa() != null && orcamento.getIdArtesa().getId() != null) {
+                body.put("id_artesa", java.util.Map.of("id", orcamento.getIdArtesa().getId()));
+            }
+            String json = objectMapper.writeValueAsString(body);
             HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + "/projeto/" + projetoId))
                     .header("Content-Type", "application/json")
                     .header("Accept", "application/json")
@@ -75,7 +83,9 @@ public class OrcamentoService {
                             }
                             return CompletableFuture.completedFuture(mapOrcamento(node));
                         }
-                        return CompletableFuture.failedFuture(new IllegalStateException(defaultErrorMessage(response.statusCode())));
+                        String rawBody = response.body();
+                        String msg = (rawBody != null && !rawBody.isBlank()) ? rawBody : defaultErrorMessage(response.statusCode());
+                        return CompletableFuture.failedFuture(new IllegalStateException("HTTP " + response.statusCode() + ": " + msg));
                     });
         } catch (IOException ex) {
             return CompletableFuture.failedFuture(new IllegalStateException("Falha ao preparar pedido de orcamento.", ex));

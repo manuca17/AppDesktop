@@ -199,6 +199,38 @@ public class EncomendaService {
                 });
     }
 
+    public CompletableFuture<List<EncomendaCatalogo>> getPendingReorders() {
+        String url = reorderBaseUrl + "/aguarda-aprovacao";
+        HttpRequest request = HttpRequest.newBuilder(URI.create(url))
+                .header("Accept", "application/json")
+                .GET()
+                .build();
+
+        return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> {
+                    if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                        return parseList(response.body());
+                    }
+                    return List.<EncomendaCatalogo>of();
+                })
+                .exceptionally(ex -> List.of());
+    }
+
+    public CompletableFuture<EncomendaCatalogo> approveReorder(Integer encomendaId, java.math.BigDecimal preco) {
+        if (encomendaId == null) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("ID da reencomenda e obrigatorio."));
+        }
+        Map<String, Object> payload = preco != null ? Map.of("preco", preco) : Map.of();
+        return sendEstadoUpdate("PUT", reorderBaseUrl + "/" + encomendaId + "/aprovar", payload);
+    }
+
+    public CompletableFuture<EncomendaCatalogo> rejectReorder(Integer encomendaId) {
+        if (encomendaId == null) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("ID da reencomenda e obrigatorio."));
+        }
+        return sendEstadoUpdate("PUT", reorderBaseUrl + "/" + encomendaId + "/rejeitar", Map.of());
+    }
+
     public CompletableFuture<EncomendaCatalogo> updateEstado(Integer encomendaId, String estado) {
         if (encomendaId == null || estado == null || estado.isBlank()) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("ID e estado da encomenda sao obrigatorios."));

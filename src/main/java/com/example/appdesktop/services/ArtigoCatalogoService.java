@@ -1,6 +1,7 @@
 package com.example.appdesktop.services;
 
 import com.example.appdesktop.models.ArtigoCatalogo;
+import com.example.appdesktop.models.ArtigoFoto;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -12,6 +13,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class ArtigoCatalogoService {
@@ -155,12 +157,65 @@ public class ArtigoCatalogoService {
         artigo.setNome(readText(node, "nome", "nomeArtigo", "titulo"));
         artigo.setPrecoUnitario(readBigDecimal(node, "precoUnitario", "preco_unitario", "preco"));
         artigo.setStock(readInteger(node, "stock"));
+        artigo.setFotoUrl(readText(node, "fotoUrl", "foto_url", "imagem"));
 
         JsonNode visivelNode = node.get("visivel");
         if (visivelNode != null && !visivelNode.isNull()) {
             artigo.setVisivel(visivelNode.asBoolean());
         }
+
+        JsonNode fotosNode = node.get("fotos");
+        if (fotosNode != null && fotosNode.isArray()) {
+            List<ArtigoFoto> fotos = new ArrayList<>();
+            for (JsonNode f : fotosNode) {
+                ArtigoFoto foto = new ArtigoFoto();
+                foto.setId(readInteger(f, "id"));
+                foto.setUrl(readText(f, "url"));
+                foto.setOrdem(readInteger(f, "ordem"));
+                fotos.add(foto);
+            }
+            artigo.setFotos(fotos);
+        }
         return artigo;
+    }
+
+    public CompletableFuture<Void> addFoto(Integer artigoId, String url) {
+        if (artigoId == null) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("ID do artigo e obrigatorio."));
+        }
+        try {
+            String json = objectMapper.writeValueAsString(Map.of("url", url == null ? "" : url));
+            HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + "/" + artigoId + "/fotos"))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(json))
+                    .build();
+            return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenCompose(response -> {
+                        if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                            return CompletableFuture.completedFuture(null);
+                        }
+                        return CompletableFuture.failedFuture(new IllegalStateException("Erro ao adicionar foto: " + response.statusCode()));
+                    });
+        } catch (IOException ex) {
+            return CompletableFuture.failedFuture(ex);
+        }
+    }
+
+    public CompletableFuture<Void> deleteFoto(Integer artigoId, Integer fotoId) {
+        if (artigoId == null || fotoId == null) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("IDs obrigatorios."));
+        }
+        HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + "/" + artigoId + "/fotos/" + fotoId))
+                .DELETE()
+                .build();
+        return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenCompose(response -> {
+                    if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                        return CompletableFuture.completedFuture(null);
+                    }
+                    return CompletableFuture.failedFuture(new IllegalStateException("Erro ao remover foto: " + response.statusCode()));
+                });
     }
 
     private Integer readInteger(JsonNode node, String... fieldNames) {

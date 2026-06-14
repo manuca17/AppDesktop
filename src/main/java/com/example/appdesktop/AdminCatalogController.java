@@ -1,14 +1,18 @@
 package com.example.appdesktop;
 
 import com.example.appdesktop.models.ArtigoCatalogo;
+import com.example.appdesktop.models.ArtigoFoto;
 import com.example.appdesktop.models.FichaTecnica;
 import com.example.appdesktop.services.ArtigoCatalogoService;
 import com.example.appdesktop.services.FichaTecnicaService;
+import com.example.appdesktop.services.UploadService;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -16,7 +20,9 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 
+import java.io.File;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -33,6 +39,7 @@ public class AdminCatalogController implements AdminPage {
 
     private final ArtigoCatalogoService artigoService = ArtigoCatalogoService.getInstance();
     private final FichaTecnicaService fichaTecnicaService = FichaTecnicaService.getInstance();
+    private final UploadService uploadService = UploadService.getInstance();
     private final NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("pt", "PT"));
 
     private List<ArtigoCatalogo> allProducts;
@@ -95,6 +102,26 @@ public class AdminCatalogController implements AdminPage {
         card.setPrefWidth(280);
         card.setStyle("-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-radius: 10; -fx-background-radius: 10;");
 
+        // Cover image or placeholder
+        String coverUrl = product.getFotoUrl();
+        if (coverUrl == null && product.getFotos() != null && !product.getFotos().isEmpty()) {
+            coverUrl = product.getFotos().get(0).getUrl();
+        }
+        if (coverUrl != null && !coverUrl.isBlank()) {
+            ImageView imageView = new ImageView(new Image(coverUrl, 252, 130, false, true, true));
+            imageView.setFitWidth(252);
+            imageView.setFitHeight(130);
+            imageView.setPreserveRatio(false);
+            card.getChildren().add(imageView);
+        } else {
+            Label placeholder = new Label("Sem foto");
+            placeholder.setPrefSize(252, 90);
+            placeholder.setMaxWidth(Double.MAX_VALUE);
+            placeholder.setAlignment(Pos.CENTER);
+            placeholder.setStyle("-fx-background-color: #f3f4f6; -fx-text-fill: #9ca3af; -fx-background-radius: 6; -fx-font-size: 13px;");
+            card.getChildren().add(placeholder);
+        }
+
         HBox header = new HBox(6);
         header.setAlignment(Pos.CENTER_LEFT);
 
@@ -107,36 +134,154 @@ public class AdminCatalogController implements AdminPage {
         Label stockBadge = buildStockBadge(product.getStock());
         header.getChildren().addAll(name, spacer, stockBadge);
 
-        Label description = new Label("Sem descricao.");
-        description.setWrapText(true);
-        description.setStyle("-fx-text-fill: #4b5563;");
-
         HBox priceRow = new HBox(10);
         priceRow.setAlignment(Pos.CENTER_LEFT);
         Label price = new Label(currencyFormat.format(product.getPrecoUnitario() == null ? BigDecimal.ZERO : product.getPrecoUnitario()));
         price.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #111827;");
+        Region spacer2 = new Region();
+        HBox.setHgrow(spacer2, Priority.ALWAYS);
         Label stockLabel = new Label(formatStockLabel(product.getStock()));
         stockLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #6b7280;");
-        priceRow.getChildren().addAll(price, spacer, stockLabel);
+        priceRow.getChildren().addAll(price, spacer2, stockLabel);
 
         HBox actions = new HBox(6);
         actions.setAlignment(Pos.CENTER_LEFT);
 
-        javafx.scene.control.Button editBtn = new javafx.scene.control.Button("Editar");
+        Button editBtn = new Button("Editar");
         editBtn.setStyle("-fx-background-color: transparent; -fx-border-color: #d1d5db; -fx-border-radius: 6;");
         editBtn.setOnAction(e -> showProductDialog(product));
 
-        javafx.scene.control.Button sheetBtn = new javafx.scene.control.Button("Ficha Tec.");
+        Button fotosBtn = new Button("Fotos");
+        fotosBtn.setStyle("-fx-background-color: transparent; -fx-border-color: #d1d5db; -fx-border-radius: 6;");
+        fotosBtn.setOnAction(e -> openFotosDialog(product));
+
+        Button sheetBtn = new Button("Ficha Tec.");
         sheetBtn.setStyle("-fx-background-color: transparent; -fx-border-color: #d1d5db; -fx-border-radius: 6;");
         sheetBtn.setOnAction(e -> openFichaTecnicaDialog(product));
 
-        javafx.scene.control.Button deleteBtn = new javafx.scene.control.Button("Remover");
+        Button deleteBtn = new Button("Remover");
         deleteBtn.setStyle("-fx-background-color: #fef2f2; -fx-text-fill: #dc2626; -fx-border-color: #fca5a5; -fx-border-radius: 6;");
         deleteBtn.setOnAction(e -> deleteProduct(product));
 
-        actions.getChildren().addAll(editBtn, sheetBtn, deleteBtn);
-        card.getChildren().addAll(header, description, priceRow, actions);
+        actions.getChildren().addAll(editBtn, fotosBtn, sheetBtn, deleteBtn);
+        card.getChildren().addAll(header, priceRow, actions);
         return card;
+    }
+
+    private void openFotosDialog(ArtigoCatalogo product) {
+        if (product.getId() == null) {
+            showError("Erro", "Artigo sem ID.");
+            return;
+        }
+
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Fotos do Produto");
+        dialog.setHeaderText(product.getNome() == null ? "Artigo" : product.getNome());
+
+        VBox root = new VBox(12);
+        root.setPadding(new Insets(12));
+        root.setPrefWidth(480);
+
+        VBox fotosBox = new VBox(8);
+        ScrollPane scroll = new ScrollPane(fotosBox);
+        scroll.setFitToWidth(true);
+        scroll.setPrefViewportHeight(260);
+        scroll.setStyle("-fx-background-color: white; -fx-background: white; -fx-border-color: #e5e7eb; -fx-border-radius: 8;");
+
+        Button addBtn = new Button("Adicionar Foto...");
+        addBtn.setStyle("-fx-background-color: #2563eb; -fx-text-fill: white; -fx-border-radius: 6;");
+        addBtn.setOnAction(e -> {
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle("Selecionar imagem");
+            chooser.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter("Imagens", "*.jpg", "*.jpeg", "*.png", "*.webp", "*.gif"));
+            File file = chooser.showOpenDialog(addBtn.getScene().getWindow());
+            if (file == null) return;
+
+            addBtn.setDisable(true);
+            addBtn.setText("A enviar...");
+            uploadService.uploadImage(file)
+                    .thenCompose(url -> artigoService.addFoto(product.getId(), url))
+                    .whenComplete((done, error) -> Platform.runLater(() -> {
+                        addBtn.setDisable(false);
+                        addBtn.setText("Adicionar Foto...");
+                        if (error != null) {
+                            showError("Erro", "Nao foi possivel carregar a foto.");
+                            return;
+                        }
+                        reloadAndRefreshFotos(product.getId(), fotosBox);
+                    }));
+        });
+
+        root.getChildren().addAll(scroll, addBtn);
+        dialog.getDialogPane().setContent(root);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+
+        loadFotosIntoBox(product, fotosBox);
+        dialog.showAndWait();
+        loadProducts();
+    }
+
+    private void reloadAndRefreshFotos(Integer artigoId, VBox fotosBox) {
+        artigoService.findAll().whenComplete((products, err) -> Platform.runLater(() -> {
+            if (products != null) {
+                allProducts = products;
+                refreshProducts();
+                products.stream()
+                        .filter(p -> p.getId() != null && p.getId().equals(artigoId))
+                        .findFirst()
+                        .ifPresent(updated -> loadFotosIntoBox(updated, fotosBox));
+            }
+        }));
+    }
+
+    private void loadFotosIntoBox(ArtigoCatalogo product, VBox fotosBox) {
+        fotosBox.getChildren().clear();
+        List<ArtigoFoto> fotos = product.getFotos();
+        if (fotos == null || fotos.isEmpty()) {
+            Label empty = new Label("Sem fotos associadas. Clique em \"Adicionar Foto...\" para carregar.");
+            empty.setStyle("-fx-text-fill: #6b7280;");
+            empty.setWrapText(true);
+            fotosBox.getChildren().add(empty);
+            return;
+        }
+        for (ArtigoFoto foto : fotos) {
+            HBox row = new HBox(10);
+            row.setAlignment(Pos.CENTER_LEFT);
+            row.setPadding(new Insets(8));
+            row.setStyle("-fx-background-color: #f9fafb; -fx-border-color: #e5e7eb; -fx-border-radius: 6; -fx-background-radius: 6;");
+
+            ImageView thumb = new ImageView();
+            thumb.setFitWidth(72);
+            thumb.setFitHeight(72);
+            thumb.setPreserveRatio(true);
+            if (foto.getUrl() != null && !foto.getUrl().isBlank()) {
+                thumb.setImage(new Image(foto.getUrl(), 72, 72, true, true, true));
+            }
+
+            Label urlLabel = new Label(foto.getUrl() == null ? "--" : foto.getUrl());
+            urlLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #374151;");
+            urlLabel.setWrapText(true);
+            HBox.setHgrow(urlLabel, Priority.ALWAYS);
+
+            Button removeBtn = new Button("Remover");
+            removeBtn.setStyle("-fx-background-color: #fef2f2; -fx-text-fill: #dc2626; -fx-border-color: #fca5a5; -fx-border-radius: 6;");
+            removeBtn.setOnAction(e -> {
+                if (product.getId() == null || foto.getId() == null) return;
+                artigoService.deleteFoto(product.getId(), foto.getId())
+                        .whenComplete((done, error) -> Platform.runLater(() -> {
+                            if (error != null) {
+                                showError("Erro", "Nao foi possivel remover a foto.");
+                                return;
+                            }
+                            fotosBox.getChildren().remove(row);
+                            loadProducts();
+                        }));
+            });
+
+            row.getChildren().addAll(thumb, urlLabel, removeBtn);
+            fotosBox.getChildren().add(row);
+        }
     }
 
     private Label buildStockBadge(Integer stock) {

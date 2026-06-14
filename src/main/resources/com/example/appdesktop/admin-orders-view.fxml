@@ -13,7 +13,9 @@
             fx:controller="com.example.appdesktop.AdminOrdersController"
             style="-fx-background: transparent; -fx-background-color: transparent;">
     <content>
-        <VBox spacing="16" style="-fx-padding: 4;">
+        <VBox spacing="20" style="-fx-padding: 4;">
+
+            <!-- Encomendas Catalogo -->
             <VBox spacing="4">
                 <Label style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="Gestao de Encomendas"/>
                 <Label style="-fx-text-fill: #4b5563;" text="Acompanhe e atualize todas as encomendas do catalogo"/>
@@ -58,6 +60,20 @@
 
             <VBox fx:id="ordersContainer" spacing="12"/>
             <Label fx:id="emptyLabel" managed="false" style="-fx-text-fill: #6b7280;" text="Nenhuma encomenda encontrada" visible="false"/>
+
+            <!-- Reencomendas Pendentes -->
+            <VBox spacing="10" style="-fx-padding: 0 0 4 0;">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #111827;" text="Reencomendas Pendentes"/>
+                    <Label fx:id="pendingReordersBadge"
+                           style="-fx-background-color: #ef4444; -fx-text-fill: white; -fx-padding: 2 8; -fx-background-radius: 999; -fx-font-size: 12px; -fx-font-weight: bold;"
+                           text="0" managed="false" visible="false"/>
+                </HBox>
+                <Label style="-fx-text-fill: #4b5563;" text="Pedidos de reencomenda aguardando aprovacao e definicao de preco."/>
+                <VBox fx:id="pendingReordersContainer" spacing="10"/>
+                <Label fx:id="emptyReordersLabel" style="-fx-text-fill: #6b7280;" text="Sem reencomendas pendentes de aprovacao."/>
+            </VBox>
+
         </VBox>
     </content>
 </ScrollPane>
