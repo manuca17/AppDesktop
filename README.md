@@ -1,54 +1,94 @@
-# AppDesktop
+# AppDesktop — Taça Lab (Administração)
 
-JavaFX desktop app with a login screen inspired by the React design (tabs for Cliente and Administrador).
+Aplicação **desktop JavaFX** de administração do sistema **Taça Lab**. Destina-se à
+**artesã/administrador** e permite gerir o atelier de cerâmica a partir do computador:
+catálogo, projetos personalizados, encomendas e reuniões, com suporte a fotos e chat.
 
-## Requirements
+Autentica-se e consome dados da API REST do backend
+**[proj2](https://github.com/manuca17/proj2)** (Spring Boot).
 
-- JDK 17+
-- Windows cmd.exe (examples below)
+## Ecossistema Taça Lab
 
-## Run
+| Componente | Repositório | Stack |
+|------------|-------------|-------|
+| **App Desktop (admin)** (este repo) | [AppDesktop](https://github.com/manuca17/AppDesktop) | JavaFX |
+| **Backend / API REST** | [proj2](https://github.com/manuca17/proj2) | Spring Boot + PostgreSQL |
+| **Portal Web** | [Sistemadeinformaocermica](https://github.com/manuca17/Sistemadeinformaocermica) | React + Vite |
+
+## Stack
+
+- **Java 17** + **JavaFX 17** (controls + FXML)
+- **ControlsFX**, **Ikonli** e **BootstrapFX** para UI
+- **Jackson** para (des)serialização JSON da API
+- **Maven** (com wrapper `mvnw`)
+- `java.net.http.HttpClient` para comunicação com o backend
+
+## Requisitos
+
+- **JDK 17+**
+- O backend [proj2](https://github.com/manuca17/proj2) a correr (por omissão em `http://localhost:8080`)
+
+## Como correr
 
 ```bat
 mvnw.cmd clean javafx:run
 ```
 
-## Tests
+(No Linux/macOS: `./mvnw clean javafx:run`.)
+
+## Testes
 
 ```bat
 mvnw.cmd test
 ```
 
-## What is implemented
+## Configuração da API
 
-- Login screen in `src/main/resources/com/example/appdesktop/login-view.fxml`
-- Controller logic in `src/main/java/com/example/appdesktop/LoginController.java`
-- Startup wired in `src/main/java/com/example/appdesktop/HelloApplication.java`
-- Client dashboard in `src/main/resources/com/example/appdesktop/client-dashboard-view.fxml`
-- Dashboard logic in `src/main/java/com/example/appdesktop/ClientDashboardController.java`
-- Mock data and calculations in `src/main/java/com/example/appdesktop/ClientDashboardService.java`
-- Client shell layout with sidebar in `src/main/resources/com/example/appdesktop/client-layout-view.fxml`
-- Sidebar navigation logic in `src/main/java/com/example/appdesktop/ClientLayoutController.java`
-- Catalog page in `src/main/resources/com/example/appdesktop/catalog-view.fxml`
-- Briefing page in `src/main/resources/com/example/appdesktop/briefing-view.fxml`
-- Projects page in `src/main/resources/com/example/appdesktop/projects-view.fxml`
-- Orders page in `src/main/resources/com/example/appdesktop/orders-view.fxml`
-- Project detail page in `src/main/resources/com/example/appdesktop/project-detail-view.fxml`
-- Order detail page in `src/main/resources/com/example/appdesktop/order-detail-view.fxml`
-- Cart page in `src/main/resources/com/example/appdesktop/cart-view.fxml`
-- Checkout page in `src/main/resources/com/example/appdesktop/checkout-view.fxml`
-- Project payment page in `src/main/resources/com/example/appdesktop/project-payment-view.fxml`
-- Project payment logic in `src/main/java/com/example/appdesktop/ProjectPaymentController.java`
-- Shared portal mock data in `src/main/java/com/example/appdesktop/ClientPortalDataService.java`
+Por omissão a app liga-se a:
 
-## Current behavior
+- Login de admin/artesã → `http://localhost:8080/api/artesas`
+- Utilizadores/clientes → `http://localhost:8080/api/utilizadores`
 
-- Login currently does not validate credentials (prototype flow)
-- Cliente login opens a full client layout with sidebar navigation
-- Dashboard, Catalogo, Briefing, Meus Projetos and Encomendas are available in the sidebar
-- Project and order lists now open dedicated detail pages with tracking and summary blocks
-- Cart page shows items with quantity and pricing, links to checkout
-- Checkout page includes shipping form, payment method selection and order summary
-- Project detail includes Pagamentos tab showing phased payments with status (paid/pending)
-- Pending payments show "Efetuar Pagamento" button that opens dedicated payment page
-- Admin login still opens a placeholder scene
+Estes URLs podem ser alterados por **propriedade de sistema** ou **variável de ambiente**:
+
+| Alvo | Propriedade (`-D`) | Variável de ambiente |
+|------|--------------------|----------------------|
+| Base de utilizadores | `appdesktop.api.base-url` | `APPDESKTOP_API_BASE_URL` |
+| Base de artesãs (admin) | `appdesktop.api.artesa-base-url` | `APPDESKTOP_API_ARTESA_BASE_URL` |
+
+Exemplo:
+
+```bat
+mvnw.cmd javafx:run -Dappdesktop.api.artesa-base-url=http://192.168.1.10:8080/api/artesas
+```
+
+## Funcionalidades
+
+- **Login de administrador** validado contra a API (`/api/artesas/login`).
+- Após autenticação, abre o **painel de administração** com navegação lateral:
+  - **Dashboard** — visão geral
+  - **Catálogo** — gestão de artigos (com fotos)
+  - **Projetos** — projetos personalizados dos clientes
+  - **Encomendas** — gestão de encomendas
+  - **Reuniões** — marcação e gestão de reuniões
+- Suporte a **fotos** de artigos e **chat** por projeto, através dos serviços da API.
+
+## Estrutura
+
+```
+src/main/java/com/example/appdesktop/
+  HelloApplication.java        Arranque JavaFX (carrega o ecrã de login)
+  Launcher.java                Launcher (entry point sem módulo)
+  LoginController.java         Login de admin contra a API
+  Admin*Controller.java        Controladores das páginas de administração
+  AdminPage / AdminPageNavigator   Navegação entre páginas do painel
+  models/                      Modelos do domínio (Utilizador, Artesa, Projeto, ...)
+  services/                    Serviços HTTP para a API (Utilizador, Catálogo,
+                               Encomenda, Chat, Reunião, Upload, Pagamento, ...)
+src/main/resources/com/example/appdesktop/
+  login-view.fxml              Ecrã de login
+  admin-*-view.fxml            Ecrãs do painel de administração
+```
+
+> Nota: existe também `ClientPortalDataService` com dados de exemplo (mock) usados durante
+> o desenvolvimento de algumas vistas.
